@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { verify } from "node:crypto";
 
+export type PayconiqQRCodeFormat = "PNG" | "SVG";
+export type PayconiqQRCodeSize = "S" | "M" | "L" | "XL";
+export type PayconiqQRCodeColor = "magenta" | "black";
 export type PayconiqQRCodeOptions = {
-  format?: "PNG" | "SVG";
-  size?: "S" | "M" | "L" | "XL";
-  color?: "magenta" | "black";
+  format?: PayconiqQRCodeFormat;
+  size?: PayconiqQRCodeSize;
+  color?: PayconiqQRCodeColor;
 };
 export type PayconiqInvoiceInfo = {
   amount: number | string;
@@ -130,6 +133,7 @@ export class PayconiqCallbackVerificationError extends Error {
 const PCBVError = PayconiqCallbackVerificationError;
 
 function createPOSURL(paymentId: string, posId: string) {
+  assert(/^[a-zA-Z0-9]{1,36}$/.test(posId), "Invalid posId");
   const payloadURL = new URL(`https://payconiq.com/l/1/${paymentId}/${posId}`);
   return payloadURL.toString();
 }
@@ -201,7 +205,6 @@ async function createPOSQRCodePayment(
     shopName?: string;
   } = {},
 ) {
-  assert(posId.length <= 36, "Invalid posId");
   assert(amount >= 1 && amount <= 999999, "Invalid amount");
   const body: PayconiqPOSRequestBody = { amount, posId, currency: "EUR" };
   if (callbackUrl) body.callbackUrl = callbackUrl;
@@ -223,7 +226,6 @@ async function createPOSQRCodePayment(
   }
 }
 async function deletePOSQRCodePayment(apiKey: string, bodyOrCancelLink: PayconiqPOSResponseBody | string) {
-  const isCancelLink = typeof bodyOrCancelLink === "string";
   if (typeof bodyOrCancelLink !== "string") bodyOrCancelLink = bodyOrCancelLink._links?.cancel?.href ?? "";
   if (bodyOrCancelLink) {
     const res = await restPayconiqRequest(apiKey, bodyOrCancelLink, {
