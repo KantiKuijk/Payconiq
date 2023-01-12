@@ -10,9 +10,9 @@ export type PayconiqQRCodeOptions = {
   color?: PayconiqQRCodeColor;
 };
 export type PayconiqInvoiceInfo = {
-  amount: number | string;
-  description: string;
-  reference: string;
+  amount?: number | string;
+  description?: string;
+  reference?: string;
 };
 export type PayconiqJWK = {
   kty: string;
@@ -480,3 +480,5 @@ export class PayconiqTest extends Payconiq {
   deletePOSQRCodePayment = async (bodyOrCancelLink: PayconiqPOSResponseBody | string) =>
     deletePOSQRCodePayment(this.#apiKey, bodyOrCancelLink);
 }
+
+/* TODO: on instance creation, have option to 'enforce' invoice info uniqueness, by giving an array of invoiceInfo objects. When an instance wants to create an invoiceURL with existing invoiceInfo, error is thrown */
