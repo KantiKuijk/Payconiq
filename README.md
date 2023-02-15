@@ -4,13 +4,52 @@
 
 > _Disclaimer: this is not an official package from Payconiq International or any affiliated owners of a Payconiq brand. This is my own implementation following the [API Docs](https://developer.payconiq.com). In no way do I make any guarantees that this code is valid, safe, or well-written. That being said, I wrote this code for my own use, and if you want to use it in your project(s), you're free to do so._
 
+Payconiq is a Belgian digital payment provider with different products. This package aims to have a simple way of using the [Payconiq API V3](https://developer.payconiq.com/online-payments-dock/#payment-api-version-3-v3-).
+
+### Requirements
+
+`Node.js 17.5+` because this package aims to have 0 dependencies, thus native fetch is needed.
+
+`TypeScript 4.7+` for ESM support, of course use of TypeScript is optional.
+
+### Installation
+
+Install using npm:
+
+```
+npm install payconiq
+```
+
+## Usage
+
+```javascript
+import { PayconiqAPI } from "payconiq"
+
+// Make a Payconiq instance
+const myPayconiq = PayconiqAPI("verySecretAPIKey", "lessSecretPaymentId");
+
+// Point-Of-Sale
+const POSQRURL = myPayconiq.createPOSQRCodeURL(posId);
+
+// Invoice
+const invoiceURL = myPayconiq.createInvoiceURL({
+  amount: 1234,
+  description: "products from us",
+  reference: "veryUniqueReference"
+});
+const invoiceQRURL1 = myPayconiq.createInvoiceURL({amount: 1234, …})
+const invoiceQRURL2 = myPayconiq.createInvoiceURL(invoiceURL)
+```
+
+# Reference
+
 ## Classes
 
-There are three classes exported: `Payconiq`, `PayconiqAPI`, and `PayconiqTest`.
+There are three classes exported: `Payconiq`, `PayconiqAPI`, and `PayconiqTest`. The first one only needs the `paymentId` and no `apiKey`. Thus, the first one (`Payconiq`) can be used on both backend and frontend. **_`PayconiqAPI` and `PayconiqTest` should only be used in the backend_**, since it needs the `apiKey`.
 
 1. `Payconiq(paymentId[, opts])` can be used for all actions that only need a `paymentId` but no `apiKey`.
-2. `PayconiqAPI(apiKey, paymentId[, opts])` can be used for all actions. It extends `Payconiq` and points to production endpoints (PROD or production environment).
-3. `PayconiqTest(apiKey, paymentId[, opts])` can be used for all actions. It extends `Payconiq` and points to test endpoints (EXT or external environment).
+2. `PayconiqAPI(apiKey, paymentId[, opts])` can be used for all actions. It extends `Payconiq` and points to production endpoints ([PROD](https://developer.payconiq.com/online-payments-dock/#latest-payconiq-version) or production environment).
+3. `PayconiqTest(apiKey, paymentId[, opts])` can be used for all actions. It extends `Payconiq` and points to test endpoints ([EXT](https://developer.payconiq.com/online-payments-dock/#latest-payconiq-version) or external environment).
 
 The `paymentId` needs to be a string of exactly 24 characters long.
 
@@ -45,6 +84,6 @@ _These first methods don't need an `apiKey` so all three classes have them._
 - `description` (string): a description for the invoice, customer sees this
 - `reference` (string): a reference for the invoice, customer does not see this, but can be used for reference in the callback or when fetching payments, or to guarantee uniqueness.
 
-The combination of `amount`, `description`, and `reference` should always be unique to distinguish between invoices and their payed status.
+> The combination of `amount`, `description`, and `reference` should always be unique to distinguish between invoices and their payed status.
 
 `createInvoiceQRCodeUrl(invoiceInfo[, qrCodeOpts])`: returns a url (string) that gives the QR-code with the given `invoiceInfo` (see `createInvoiceUrl` method). The QR-code can be altered with the `qrCodeOpts` object.

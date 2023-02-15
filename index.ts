@@ -10,7 +10,7 @@ export type PayconiqQRCodeOptions = {
   color?: PayconiqQRCodeColor;
 };
 export type PayconiqInvoiceInfo = {
-  amount?: number | string;
+  amount: number | string;
   description?: string;
   reference?: string;
 };
@@ -32,6 +32,15 @@ type PayconiqDebtor = {
   name?: string;
   iban?: string;
 };
+type PayconiqStatusCodes =
+  | "PENDING"
+  | "IDENTIFIED"
+  | "AUTHORIZED"
+  | "AUTHORIZATION_FAILED"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "CANCELLED"
+  | "EXPIRED";
 export type PayconiqPOSCallbackBody = {
   paymentId: string;
   amount: number;
@@ -44,15 +53,7 @@ export type PayconiqPOSCallbackBody = {
   createdAt: string;
   expiresAt: string;
   succeededAt: string;
-  status:
-    | "PENDING"
-    | "IDENTIFIED"
-    | "AUTHORIZED"
-    | "AUTHORIZATION_FAILED"
-    | "SUCCEEDED"
-    | "FAILED"
-    | "CANCELLED"
-    | "EXPIRED";
+  status: PayconiqStatusCodes;
   debtor: PayconiqDebtor;
 };
 export type PayconiqPOSRequestBody = {
@@ -89,7 +90,7 @@ type PayconiqLinks = {
 };
 export type PayconiqPOSResponseBody = {
   paymentId: string;
-  status: "PENDING";
+  status: PayconiqStatusCodes;
   createdAt: string;
   expiresAt: string;
   description?: string;
@@ -133,7 +134,7 @@ export class PayconiqCallbackVerificationError extends Error {
 const PCBVError = PayconiqCallbackVerificationError;
 
 function createPOSURL(paymentId: string, posId: string) {
-  assert(/^[a-zA-Z0-9]{1,36}$/.test(posId), "Invalid posId");
+  assert(/^([a-z0-9]{1,36}|[A-Z0-9]{1,36})$/.test(posId), "Invalid posId");
   const payloadURL = new URL(`https://payconiq.com/l/1/${paymentId}/${posId}`);
   return payloadURL.toString();
 }
@@ -145,7 +146,13 @@ function createPOSQRCodeURL(paymentId: string, posId: string, qrCodeOpts: Paycon
   if (qrCodeOpts.color) serviceURL.searchParams.append("cl", qrCodeOpts.color);
   return serviceURL.toString();
 }
+function validateInvoiceInfo(invoiceInfo: PayconiqInvoiceInfo) {
+  assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
+  if (invoiceInfo.description) assert(invoiceInfo.description.length <= 35, "Description too long");
+  if (invoiceInfo.reference) assert(invoiceInfo.reference.length <= 35, "Reference too long");
+}
 function createInvoiceURL(paymentId: string, invoiceInfo: PayconiqInvoiceInfo) {
+  validateInvoiceInfo(invoiceInfo);
   const payloadURL = new URL(`https://payconiq.com/t/1/${paymentId}`);
   if (invoiceInfo.amount) payloadURL.searchParams.append("A", String(invoiceInfo.amount));
   if (invoiceInfo.description) payloadURL.searchParams.append("D", invoiceInfo.description);
@@ -184,6 +191,16 @@ async function restPayconiqRequest(
     body: JSON.stringify(body),
   });
 }
+function validatePOSPaymentInfo(POSReqBody: PayconiqPOSRequestBody) {
+  assert(/^([a-z0-9]{1,36}|[A-Z0-9]{1,36})$/.test(POSReqBody.posId), "Invalid posId");
+  assert(POSReqBody.amount >= 1 && POSReqBody.amount <= 999999, "Invalid amount");
+  if (POSReqBody.currency) assert(POSReqBody.currency === "EUR", "Invalid currency");
+  if (POSReqBody.description) assert(POSReqBody.description.length <= 140, "Description too long");
+  if (POSReqBody.reference) assert(POSReqBody.reference.length <= 35, "Reference too long");
+  if (POSReqBody.bulkId) assert(POSReqBody.bulkId.length <= 35, "BulkId too long");
+  if (POSReqBody.shopId) assert(POSReqBody.shopId.length <= 36, "ShopId too long");
+  if (POSReqBody.shopName) assert(POSReqBody.shopName.length <= 36, "ShopName too long");
+}
 async function createPOSQRCodePayment(
   apiKey: string,
   POSQRCodeURL: string,
@@ -191,28 +208,24 @@ async function createPOSQRCodePayment(
   amount: number,
   {
     callbackUrl,
+    currency,
     description,
     reference,
     bulkId,
     shopId,
     shopName,
-  }: {
-    callbackUrl?: string;
-    description?: string;
-    reference?: string;
-    bulkId?: string;
-    shopId?: string;
-    shopName?: string;
-  } = {},
+  }: Omit<PayconiqPOSRequestBody, "posId" | "amount"> = {},
 ) {
-  assert(amount >= 1 && amount <= 999999, "Invalid amount");
+  validatePOSPaymentInfo({ posId, amount, callbackUrl, currency, description, reference, bulkId, shopId, shopName });
   const body: PayconiqPOSRequestBody = { amount, posId, currency: "EUR" };
   if (callbackUrl) body.callbackUrl = callbackUrl;
+  if (currency) body.currency = currency;
   if (description) body.description = description.substring(0, 140);
   if (reference) body.reference = reference.substring(0, 35);
   if (bulkId) body.bulkId = bulkId.substring(0, 35);
   if (shopId) body.shopId = shopId.substring(0, 36);
   if (shopName) body.shopName = shopName.substring(0, 36);
+  console.log(apiKey, POSQRCodeURL, body);
   const paymentResponse = await restPayconiqRequest(apiKey, POSQRCodeURL, {
     body,
   });
@@ -246,9 +259,10 @@ async function verifyCallback(
   getJWK: Function,
   signature: string,
   body: string,
-  maxAgeMs: number = 15000,
+  maxAgeMs: number = 5000,
   callbackURL: string,
   paymentId: string,
+  now?: number,
 ) {
   const match = signature.match(signatureRegex);
   if (match === null) throw new PCBVError("Incorrect compact detached signature");
@@ -259,7 +273,12 @@ async function verifyCallback(
   if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
   if (header["https://payconiq.com/sub"] !== paymentId) throw new PCBVError("Invalid subject");
   if (callbackURL && header["https://payconiq.com/path"] !== callbackURL) throw new PCBVError("Invalid path");
-  if (Date.parse(header["https://payconiq.com/iat"]) < Date.now() - maxAgeMs) throw new PCBVError("Invalid issued at");
+  now = now ?? Date.now();
+  const iat = Date.parse(header["https://payconiq.com/iat"]);
+  if (now - iat > maxAgeMs || iat - now > 100) {
+    console.warn(`Invalid issued at: ${iat} .:. ${now}`);
+    throw new PCBVError("Invalid issued at");
+  }
   // TODO jti check
   const jwk = await getJWK(header.kid);
   if (!jwk) throw new PCBVError("Missing kid");
@@ -272,7 +291,14 @@ async function verifyCallback(
   if (!verified) throw new PCBVError("Failed verfication");
   return true;
 }
-
+export type PayconiqProductTypes = "instore" | "predefined" | "invoice" | "receipt";
+/* TODO: Maak een verschillende class per product type
+ * zodat hun methodes soort van gelijk benoemd kunnen zijn:
+ * - makeQRCode (alle)
+ * - verify (alle)
+ * - makePayment (predefined, invoice, receipt?)
+ * - deletePayment (predefined)
+ */
 export default class Payconiq {
   paymentId: string;
   callbackURL: string;
@@ -339,7 +365,11 @@ export class PayconiqAPI extends Payconiq {
     if (!jwk) jwk = (await this.setJWKS(null, true))[kid];
     return jwk;
   }
-  verifyCallback = async (signature: string, body: string, maxAgeMs?: number, callbackURL?: string) =>
+  verifyCallback = async (
+    signature: string,
+    body: string,
+    { maxAgeMs, callbackURL, now }: { maxAgeMs?: number; callbackURL?: string; now?: number } = {},
+  ) =>
     verifyCallback(
       (kid: string) => PayconiqAPI.#getJWK(kid),
       signature,
@@ -347,6 +377,7 @@ export class PayconiqAPI extends Payconiq {
       maxAgeMs ?? 15000,
       callbackURL ?? this.callbackURL,
       this.paymentId,
+      now,
     );
   restRequest = async (
     url: string,
@@ -431,7 +462,11 @@ export class PayconiqTest extends Payconiq {
     }
     return jwk;
   }
-  verifyCallback = async (signature: string, body: string, maxAgeMs?: number, callbackURL?: string) =>
+  verifyCallback = async (
+    signature: string,
+    body: string,
+    { maxAgeMs, callbackURL, now }: { maxAgeMs?: number; callbackURL?: string; now?: number } = {},
+  ) =>
     verifyCallback(
       (kid: string) => PayconiqTest.#getJWK(kid),
       signature,
@@ -439,6 +474,7 @@ export class PayconiqTest extends Payconiq {
       maxAgeMs ?? 15000,
       callbackURL ?? this.callbackURL,
       this.paymentId,
+      now,
     );
   restRequest = async (
     url: string,

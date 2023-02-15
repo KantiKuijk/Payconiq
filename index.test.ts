@@ -58,12 +58,12 @@ test("don't fail on valid posId", () => {
 
 test("make the correct invoice URL", () => {
   for (let pq of pqs) {
-    expect(pq.createInvoiceURL({ amount: 24574 })).toBe(`https://payconiq.com/t/1/testPaymentIdpaymenTtesT?A=24574`);
+    expect(pq.createInvoiceURL({ amount: 24574 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=24574`);
     expect(pq.createInvoiceURL({ amount: 1254, reference: "referenceXYZ" })).toBe(
-      `https://payconiq.com/t/1/testPaymentIdpaymenTtesT?A=1254&R=referenceXYZ`,
+      `https://payconiq.com/t/1/${paymentId}?A=1254&R=referenceXYZ`,
     );
     expect(pq.createInvoiceURL({ amount: 1254, description: "this is a description", reference: "referenceXYZ" })).toBe(
-      `https://payconiq.com/t/1/testPaymentIdpaymenTtesT?A=1254&D=this+is+a+description&R=referenceXYZ`,
+      `https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`,
     );
   }
 });
