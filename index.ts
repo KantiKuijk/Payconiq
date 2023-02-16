@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { verify } from "node:crypto";
+import { createPrivateKey, createPublicKey, verify } from "node:crypto";
 
 export type PayconiqEnvironments = "PROD" | "EXT";
 export type PayconiqQRCodeFormat = "PNG" | "SVG";
@@ -134,7 +134,7 @@ export class PayconiqCallbackVerificationError extends Error {
 }
 const PCBVError = PayconiqCallbackVerificationError;
 
-export type PayconiqProductTypes = "instore" | "predefined" | "invoice" | "receipt";
+export type PayconiqProductType = "predefined" | "invoice" | "receipt"; // | "instore";
 /* TODO: Maak een verschillende class per product type
  * zodat hun methodes soort van gelijk benoemd kunnen zijn:
  * - makeQRCode (alle)
@@ -142,19 +142,42 @@ export type PayconiqProductTypes = "instore" | "predefined" | "invoice" | "recei
  * - makePayment (predefined, invoice, receipt?)
  * - deletePayment (predefined)
  */
+export type PayconiqProductTypeToClass<T extends PayconiqProductType> =
+  // T extends "instore"
+  // ? typeof PayconiqInstore :
+  T extends "predefined"
+    ? typeof PayconiqPredefined
+    : T extends "invoice"
+    ? typeof PayconiqInvoice
+    : T extends "receipt"
+    ? typeof PayconiqReceipt
+    : never;
+export type PayconiqProductTypeToInstance<T extends PayconiqProductType> =
+  // T extends "instore"
+  // ? PayconiqInstore :
+  T extends "predefined"
+    ? PayconiqPredefined
+    : T extends "invoice"
+    ? PayconiqInvoice
+    : T extends "receipt"
+    ? PayconiqReceipt
+    : never;
 export type PayconiqProductOptions = {
   callbackURL?: string | null;
   defQRCodeOpts?: PayconiqQRCodeOptions;
   environment?: PayconiqEnvironments;
 };
+
 export default class PayconiqProduct {
   ppid: string;
-  callbackURL: string | null | undefined;
+  readonly callbackURL: string | null | undefined;
   defQRCodeOpts: PayconiqQRCodeOptions;
-  environment: PayconiqEnvironments;
-  verifier: PayconiqVerify | PayconiqVerifyEXT;
+  readonly environment: PayconiqEnvironments;
+  readonly verifier: PayconiqVerify | PayconiqVerifyEXT;
+  #apiKey: string;
   constructor(
     ppid: string,
+    apiKey: string,
     { callbackURL, defQRCodeOpts, environment = "PROD" }: PayconiqProductOptions = { environment: "PROD" },
   ) {
     assert(typeof ppid === "string" && ppid.length === 24, "Invalid Payment id");
@@ -163,9 +186,11 @@ export default class PayconiqProduct {
     this.defQRCodeOpts = defQRCodeOpts ?? {};
     this.environment = environment;
     this.verifier =
-      environment === "PROD"
+      this.environment === "PROD"
         ? new PayconiqVerify({ product: this, callbackURL })
         : new PayconiqVerifyEXT({ product: this, callbackURL });
+    assert(typeof apiKey === "string" && apiKey.length === 36, "Invalid API key");
+    this.#apiKey = apiKey;
   }
   verify(
     signature: string,
@@ -176,40 +201,17 @@ export default class PayconiqProduct {
   }
 }
 
-export class PayconiqInstore extends PayconiqProduct {
-  constructor(ppid: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
-    super(ppid, productOptions);
-  }
-  makeQRcode() {
-    return `HTTPS://PAYCONIQ.COM/MERCHANT/1/${this.ppid}`;
-  }
-}
-export class PayconiqAPIProduct extends PayconiqProduct {
-  // Heuristic class for products with API key
-  #apiKey: string;
-  constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
-    super(ppid, productOptions);
-    assert(typeof apiKey === "string" && apiKey.length === 36, "Invalid API key");
-    this.#apiKey = apiKey;
-  }
-  restRequest(
-    url: string,
-    { method = "POST", body = {} }: { method?: "POST" | "DELETE"; body?: any } = {
-      method: "POST",
-      body: {},
-    },
-  ) {
-    return fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.#apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-  }
-}
-export class PayconiqPredefined extends PayconiqAPIProduct {
+// export class PayconiqInstore extends PayconiqProduct {
+//   #apiKey: string;
+//   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
+//     super(ppid, apiKey, productOptions);
+//     this.#apiKey = apiKey;
+//   }
+//   makeQRcode() {
+//     return `HTTPS://PAYCONIQ.COM/MERCHANT/1/${this.ppid}`;
+//   }
+// }
+export class PayconiqPredefined extends PayconiqProduct {
   #apiKey: string;
   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
     super(ppid, apiKey, productOptions);
@@ -311,8 +313,36 @@ export class PayconiqPredefined extends PayconiqAPIProduct {
     } else throw new Error(`No cancel link found`);
   }
 }
-
-export class PayconiqInvoice extends PayconiqAPIProduct {
+export class PayconiqInvoice extends PayconiqProduct {
+  #apiKey: string;
+  constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
+    super(ppid, apiKey, productOptions);
+    this.#apiKey = apiKey;
+  }
+  validatePaymentInfo(invoiceInfo: PayconiqInvoiceInfo) {
+    assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
+    if (invoiceInfo.description) assert(invoiceInfo.description.length <= 35, "Description too long");
+    if (invoiceInfo.reference) assert(invoiceInfo.reference.length <= 35, "Reference too long");
+  }
+  makePayment(invoiceInfo: PayconiqInvoiceInfo) {
+    this.validatePaymentInfo(invoiceInfo);
+    const payloadURL = new URL(`https://payconiq.com/t/1/${this.ppid}`);
+    if (invoiceInfo.amount) payloadURL.searchParams.append("A", String(invoiceInfo.amount));
+    if (invoiceInfo.description) payloadURL.searchParams.append("D", invoiceInfo.description);
+    if (invoiceInfo.reference) payloadURL.searchParams.append("R", invoiceInfo.reference);
+    return payloadURL.toString();
+  }
+  makeQRcode(invoiceInfo: PayconiqInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
+    const serviceURL = new URL("https://portal.payconiq.com/qrcode");
+    serviceURL.searchParams.append("c", typeof invoiceInfo === "string" ? invoiceInfo : this.makePayment(invoiceInfo));
+    qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
+    if (qrCodeOpts.format) serviceURL.searchParams.append("f", qrCodeOpts.format);
+    if (qrCodeOpts.size) serviceURL.searchParams.append("s", qrCodeOpts.size);
+    if (qrCodeOpts.color) serviceURL.searchParams.append("cl", qrCodeOpts.color);
+    return serviceURL.toString();
+  }
+}
+export class PayconiqReceipt extends PayconiqProduct {
   #apiKey: string;
   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
     super(ppid, apiKey, productOptions);
@@ -342,35 +372,12 @@ export class PayconiqInvoice extends PayconiqAPIProduct {
   }
 }
 
-export class PayconiqReceipt extends PayconiqAPIProduct {
-  #apiKey: string;
-  constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
-    super(ppid, apiKey, productOptions);
-    this.#apiKey = apiKey;
-  }
-  validatePaymentInfo(invoiceInfo: PayconiqInvoiceInfo) {
-    assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
-    if (invoiceInfo.description) assert(invoiceInfo.description.length <= 35, "Description too long");
-    if (invoiceInfo.reference) assert(invoiceInfo.reference.length <= 35, "Reference too long");
-  }
-  makePayment(invoiceInfo: PayconiqInvoiceInfo) {
-    this.validatePaymentInfo(invoiceInfo);
-    const payloadURL = new URL(`https://payconiq.com/t/1/${this.ppid}`);
-    if (invoiceInfo.amount) payloadURL.searchParams.append("A", String(invoiceInfo.amount));
-    if (invoiceInfo.description) payloadURL.searchParams.append("D", invoiceInfo.description);
-    if (invoiceInfo.reference) payloadURL.searchParams.append("R", invoiceInfo.reference);
-    return payloadURL.toString();
-  }
-  makeQRcode(invoiceInfo: PayconiqInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
-    const serviceURL = new URL("https://portal.payconiq.com/qrcode");
-    serviceURL.searchParams.append("c", typeof invoiceInfo === "string" ? invoiceInfo : this.makePayment(invoiceInfo));
-    qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
-    if (qrCodeOpts.format) serviceURL.searchParams.append("f", qrCodeOpts.format);
-    if (qrCodeOpts.size) serviceURL.searchParams.append("s", qrCodeOpts.size);
-    if (qrCodeOpts.color) serviceURL.searchParams.append("cl", qrCodeOpts.color);
-    return serviceURL.toString();
-  }
-}
+export const PayconiqProducts: { [T in PayconiqProductType]: PayconiqProductTypeToClass<T> } = {
+  predefined: PayconiqPredefined,
+  invoice: PayconiqInvoice,
+  receipt: PayconiqReceipt,
+  // instore: PayconiqInstore,
+};
 
 /* TODO: on instance creation, have option to 'enforce' invoice info uniqueness, by giving an array of invoiceInfo objects. When an instance wants to create an invoiceURL with existing invoiceInfo, error is thrown */
 
@@ -400,6 +407,9 @@ export class PayconiqVerify {
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
     return this.#JWKS;
+  }
+  async setJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
+    return PayconiqVerify.setJWKS({ JWKS, force });
   }
   static async #getJWK(kid: string) {
     let jwk = (await this.setJWKS())[kid];
@@ -443,7 +453,7 @@ export class PayconiqVerify {
     const verified = verify(
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
-      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk },
+      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk as any },
       Buffer.from(match[2], "base64url"),
     );
     if (!verified) throw new PCBVError("Failed verfication");
@@ -474,6 +484,9 @@ export class PayconiqVerifyEXT {
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
     return this.#JWKS;
+  }
+  async setJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
+    return PayconiqVerifyEXT.setJWKS({ JWKS, force });
   }
   static async #getJWK(kid: string) {
     let jwk = (await this.setJWKS())[kid];
@@ -517,7 +530,7 @@ export class PayconiqVerifyEXT {
     const verified = verify(
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
-      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk },
+      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk as any },
       Buffer.from(match[2], "base64url"),
     );
     if (!verified) throw new PCBVError("Failed verfication");

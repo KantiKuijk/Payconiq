@@ -1,15 +1,8 @@
-import PayconiqProduct, {
-  PayconiqAPIProduct,
-  PayconiqInstore,
-  PayconiqInvoice,
-  PayconiqPredefined,
-  PayconiqReceipt,
-} from ".";
+import PayconiqProduct, { PayconiqInvoice, PayconiqPredefined, PayconiqReceipt } from ".";
 
 test("fail on incorrect paymentId", () => {
-  expect(() => new PayconiqProduct("tooShortPaymentId")).toThrow("Invalid Payment id");
-  expect(() => new PayconiqInstore("tooShortPaymentId")).toThrow("Invalid Payment id");
-  expect(() => new PayconiqAPIProduct("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
+  expect(() => new PayconiqProduct("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
+  // expect(() => new PayconiqInstore("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
   expect(() => new PayconiqPredefined("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
   expect(() => new PayconiqInvoice("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
   expect(() => new PayconiqReceipt("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
@@ -18,7 +11,6 @@ test("fail on incorrect paymentId", () => {
 const paymentId = "testPaymentIdpaymenTtesT";
 
 test("fail on incorrect apiKey", () => {
-  expect(() => new PayconiqAPIProduct(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
   expect(() => new PayconiqPredefined(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
   expect(() => new PayconiqInvoice(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
   expect(() => new PayconiqReceipt(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
@@ -26,15 +18,13 @@ test("fail on incorrect apiKey", () => {
 
 const apiKey = "APIkeytestAPIkeytestAPIkeytestAPIkey";
 
-const pqProduct = new PayconiqProduct(paymentId);
-const pqInstore = new PayconiqInstore(paymentId);
-const pqAPIProduct = new PayconiqAPIProduct(paymentId, apiKey);
+const pqProduct = new PayconiqProduct(paymentId, apiKey);
+// const pqInstore = new PayconiqInstore(paymentId, apiKey);
 const pqPredefined = new PayconiqPredefined(paymentId, apiKey);
 const pqInvoice = new PayconiqInvoice(paymentId, apiKey);
 const pqReceipt = new PayconiqReceipt(paymentId, apiKey);
-const pqProductExt = new PayconiqProduct(paymentId, { environment: "EXT" });
-const pqInstoreExt = new PayconiqInstore(paymentId, { environment: "EXT" });
-const pqAPIProductExt = new PayconiqAPIProduct(paymentId, apiKey, { environment: "EXT" });
+const pqProductExt = new PayconiqProduct(paymentId, apiKey, { environment: "EXT" });
+// const pqInstoreExt = new PayconiqInstore(paymentId, apiKey, { environment: "EXT" });
 const pqPredefinedExt = new PayconiqPredefined(paymentId, apiKey, { environment: "EXT" });
 const pqInvoiceExt = new PayconiqInvoice(paymentId, apiKey, { environment: "EXT" });
 const pqReceiptExt = new PayconiqReceipt(paymentId, apiKey, { environment: "EXT" });
