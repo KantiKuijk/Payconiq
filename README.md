@@ -8,7 +8,7 @@ Payconiq is a Belgian digital payment provider with different products. This pac
 
 ### Preamble
 
-This package is in no way feature-complete. I needed to use the Payconiq API for a project and decided to make a module out of it for my own enjoyment. Thus the roadmap and (planned) features are mostly decided by my needs. That being said, I do try to make the use and implementation general enough such that it can be used in any project. I also more than welcome feature requests or pull requests.
+This package is in no way feature-complete. I needed to use the Payconiq API for a project and decided to make a node package out of it for my own enjoyment. Thus the roadmap and (planned) features are mostly decided by my needs. That being said, I do try to make the use and implementation general enough such that it can be used in any project. I also more than welcome feature requests or pull requests.
 
 ### Requirements
 
@@ -145,4 +145,4 @@ Eventhough no methods using the API key are implemented, it is still needed in t
 
 ## Missing Features
 
-This module does not include any features for partner integration or the following products: Terminal & Display, Custom Online, App2App, Top-up. The Static QR-code also called sticker, ECR sticker or some other confusing names, is not supported since Payconiq misses anything to be implemented (so no automation for this product except by webscraping the portal). This module cannot do payout reconciliation or help with refund services. The supported products are only partly so, in that they miss features for getting payments, getting a payment list or refunding.
+This package does not include any features for partner integration or the following products: Terminal & Display, Custom Online, App2App, Top-up. The Static QR-code also called sticker, ECR sticker or some other confusing names, is not supported since Payconiq misses anything to be implemented (so no automation for this product except by webscraping the portal). This package cannot do payout reconciliation or help with refund services. The supported products are only partly so, in that they miss features for getting payments, getting a payment list or refunding.
