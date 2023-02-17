@@ -52,6 +52,12 @@ const isLegit = payconiqInvoicing.verify(signatureFromRequest, bodyFromRequest, 
 
 For every (implemented: predefined, invoice, receipt) URL-string product there is a class exported: `PayconiqPredefined`, `PayconiqInvoice`, and `PayconiqReceipt`. Since they all need an API key in their constructor **_it should only be used in the backend_**.
 
+## Common Across Products
+
+All product classes have common or at least similar elements.
+
+### Constructor
+
 The constructor parameters are the same for all product classes:
 
 - `ppid` _(string)_ .:. paymentId given by Payconiq.
@@ -61,7 +67,9 @@ The constructor parameters are the same for all product classes:
   - `defQRCodeOpts` _(object)_ .:. if you want to set defaults for generated QR-codes.
   - `environment` _(`"PROD"` or `"EXT"`)_ .:. for use of the external of production environment, default is `"PROD"`.
 
-Every product has the same basic methods, however, their exact use may differ, mostly in being synchronous or asynchronous and its arguments.
+### Methods
+
+Every product has the same basic set of methods. However, their exact use may differ, mostly in being synchronous or asynchronous and its arguments.
 
 **`makePayment(…)`** .:. depends on the product where it may have to register the payment against URL-string servers or only generate a URL-string identifying a payment
 
@@ -80,6 +88,8 @@ Every product has the same basic methods, however, their exact use may differ, m
 - `maxAgeMs` _(number)_ .:. the maximum allowable time difference with the critical header `iat` when `iat` is earlier than `now`. A hard limit of 100ms is set when `now` is earlier than `iat`.
 
 **`fetchJWKS({force, JWKS, lastFetch})`** .:. (re)fetches the JWKS from Payconiq servers. Force (re)fetching by setting `force` to `true`. If you fetched the JWKS seperately, you can pass it in as `JWKS` and set its fetch time with `lastFetch`.
+
+### JWKS Handling
 
 The JWKS is lazily fetched and cached. So the first `verify` call will check if there is a JWKS in the cache. If not or if they are too old or if `force` is set to `true`, they will be fetched and cached for later used. This can lengthen a (first) `verify` call. To expedite a `verify` call and alleviate it from having to (re)fetch JWKS, you can fetch them beforehand using the `fetchJWKS` method. The JWKS cache is shared among all products of the same environment, thus manually setting JWKS will also overwrite it for all other products using the same environment (although I am not completely sure when you would want different JWKS for products in the same environment).
 
