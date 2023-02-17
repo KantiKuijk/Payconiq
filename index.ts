@@ -10,7 +10,7 @@ export type PayconiqQRCodeOptions = {
   size?: PayconiqQRCodeSize;
   color?: PayconiqQRCodeColor;
 };
-export type PayconiqInvoiceInfo = {
+export type PayconiqReceiptOrInvoiceInfo = {
   amount: number | string;
   description?: string;
   reference?: string;
@@ -192,6 +192,9 @@ export default class PayconiqProduct {
     assert(typeof apiKey === "string" && apiKey.length === 36, "Invalid API key");
     this.#apiKey = apiKey;
   }
+  async fetchJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
+    return (this.environment === "PROD" ? PayconiqVerify : PayconiqVerifyEXT).fetchJWKS({ JWKS, force });
+  }
   verify(
     signature: string,
     body: string,
@@ -319,20 +322,20 @@ export class PayconiqInvoice extends PayconiqProduct {
     super(ppid, apiKey, productOptions);
     this.#apiKey = apiKey;
   }
-  validatePaymentInfo(invoiceInfo: PayconiqInvoiceInfo) {
+  assertInvoiceInfo(invoiceInfo: PayconiqReceiptOrInvoiceInfo) {
     assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
     if (invoiceInfo.description) assert(invoiceInfo.description.length <= 35, "Description too long");
     if (invoiceInfo.reference) assert(invoiceInfo.reference.length <= 35, "Reference too long");
   }
-  makePayment(invoiceInfo: PayconiqInvoiceInfo) {
-    this.validatePaymentInfo(invoiceInfo);
+  makePayment(invoiceInfo: PayconiqReceiptOrInvoiceInfo) {
+    this.assertInvoiceInfo(invoiceInfo);
     const payloadURL = new URL(`https://payconiq.com/t/1/${this.ppid}`);
     if (invoiceInfo.amount) payloadURL.searchParams.append("A", String(invoiceInfo.amount));
     if (invoiceInfo.description) payloadURL.searchParams.append("D", invoiceInfo.description);
     if (invoiceInfo.reference) payloadURL.searchParams.append("R", invoiceInfo.reference);
     return payloadURL.toString();
   }
-  makeQRcode(invoiceInfo: PayconiqInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
+  makeQRcode(invoiceInfo: PayconiqReceiptOrInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
     const serviceURL = new URL("https://portal.payconiq.com/qrcode");
     serviceURL.searchParams.append("c", typeof invoiceInfo === "string" ? invoiceInfo : this.makePayment(invoiceInfo));
     qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
@@ -348,22 +351,22 @@ export class PayconiqReceipt extends PayconiqProduct {
     super(ppid, apiKey, productOptions);
     this.#apiKey = apiKey;
   }
-  validatePaymentInfo(invoiceInfo: PayconiqInvoiceInfo) {
-    assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
-    if (invoiceInfo.description) assert(invoiceInfo.description.length <= 35, "Description too long");
-    if (invoiceInfo.reference) assert(invoiceInfo.reference.length <= 35, "Reference too long");
+  assertReceiptInfo(receiptInfo: PayconiqReceiptOrInvoiceInfo) {
+    assert(receiptInfo.amount >= 1 && receiptInfo.amount <= 999999, "Invalid amount");
+    if (receiptInfo.description) assert(receiptInfo.description.length <= 35, "Description too long");
+    if (receiptInfo.reference) assert(receiptInfo.reference.length <= 35, "Reference too long");
   }
-  makePayment(invoiceInfo: PayconiqInvoiceInfo) {
-    this.validatePaymentInfo(invoiceInfo);
+  makePayment(receiptInfo: PayconiqReceiptOrInvoiceInfo) {
+    this.assertReceiptInfo(receiptInfo);
     const payloadURL = new URL(`https://payconiq.com/t/1/${this.ppid}`);
-    if (invoiceInfo.amount) payloadURL.searchParams.append("A", String(invoiceInfo.amount));
-    if (invoiceInfo.description) payloadURL.searchParams.append("D", invoiceInfo.description);
-    if (invoiceInfo.reference) payloadURL.searchParams.append("R", invoiceInfo.reference);
+    if (receiptInfo.amount) payloadURL.searchParams.append("A", String(receiptInfo.amount));
+    if (receiptInfo.description) payloadURL.searchParams.append("D", receiptInfo.description);
+    if (receiptInfo.reference) payloadURL.searchParams.append("R", receiptInfo.reference);
     return payloadURL.toString();
   }
-  makeQRcode(invoiceInfo: PayconiqInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
+  makeQRcode(receiptInfo: PayconiqReceiptOrInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
     const serviceURL = new URL("https://portal.payconiq.com/qrcode");
-    serviceURL.searchParams.append("c", typeof invoiceInfo === "string" ? invoiceInfo : this.makePayment(invoiceInfo));
+    serviceURL.searchParams.append("c", typeof receiptInfo === "string" ? receiptInfo : this.makePayment(receiptInfo));
     qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
     if (qrCodeOpts.format) serviceURL.searchParams.append("f", qrCodeOpts.format);
     if (qrCodeOpts.size) serviceURL.searchParams.append("s", qrCodeOpts.size);
@@ -392,28 +395,29 @@ export class PayconiqVerify {
   }
   static #JWKPath = "https://payconiq.com/certificates";
   static #JWKS: PayconiqJWKSbyKid;
-  static #lastJWKSUpdate: number;
-  static async setJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
+  static #lastJWKSFetch: number;
+  static async fetchJWKS(
+    { JWKS, force = false, lastUpdate: lastFetch }: { JWKS?: PayconiqJWKS; force?: boolean; lastUpdate?: number } = {
+      force: false,
+    },
+  ) {
     if (
       JWKS === null &&
-      (force || this.#JWKS === undefined || this.#lastJWKSUpdate + PAYCONIQJWKLIFETIMEMS < Date.now())
+      (force || this.#JWKS === undefined || this.#lastJWKSFetch + PAYCONIQJWKLIFETIMEMS < Date.now())
     ) {
       const jwksResponse = await fetch(this.#JWKPath);
       JWKS = ((await jwksResponse.json()) as { keys: PayconiqJWK[] }).keys.filter(
         (key) =>
           key.use === "sig" && key.kty === "RSA" && key.alg === "RS256" && key.kid && typeof key.x5c[0] === "string",
       );
-      this.#lastJWKSUpdate = Date.now();
+      this.#lastJWKSFetch = lastFetch ?? Date.now();
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
     return this.#JWKS;
   }
-  async setJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
-    return PayconiqVerify.setJWKS({ JWKS, force });
-  }
   static async #getJWK(kid: string) {
-    let jwk = (await this.setJWKS())[kid];
-    if (!jwk) jwk = (await this.setJWKS({ force: true }))[kid];
+    let jwk = (await this.fetchJWKS())[kid];
+    if (!jwk) jwk = (await this.fetchJWKS({ force: true }))[kid];
     return jwk;
   }
   async verifyCallback(
@@ -469,28 +473,27 @@ export class PayconiqVerifyEXT {
   }
   static #JWKPath = "https://ext.payconiq.com/certificates";
   static #JWKS: PayconiqJWKSbyKid;
-  static #lastJWKSUpdate: number;
-  static async setJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
+  static #lastJWKSFetch: number;
+  static async fetchJWKS(
+    { JWKS, force = false, lastFetch }: { JWKS?: PayconiqJWKS; force?: boolean; lastFetch?: number } = { force: false },
+  ) {
     if (
       JWKS === null &&
-      (force || this.#JWKS === undefined || this.#lastJWKSUpdate + PAYCONIQJWKLIFETIMEMS < Date.now())
+      (force || this.#JWKS === undefined || this.#lastJWKSFetch + PAYCONIQJWKLIFETIMEMS < Date.now())
     ) {
       const jwksResponse = await fetch(this.#JWKPath);
       JWKS = ((await jwksResponse.json()) as { keys: PayconiqJWK[] }).keys.filter(
         (key) =>
           key.use === "sig" && key.kty === "RSA" && key.alg === "RS256" && key.kid && typeof key.x5c[0] === "string",
       );
-      this.#lastJWKSUpdate = Date.now();
+      this.#lastJWKSFetch = lastFetch ?? Date.now();
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
     return this.#JWKS;
   }
-  async setJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
-    return PayconiqVerifyEXT.setJWKS({ JWKS, force });
-  }
   static async #getJWK(kid: string) {
-    let jwk = (await this.setJWKS())[kid];
-    if (!jwk) jwk = (await this.setJWKS({ force: true }))[kid];
+    let jwk = (await this.fetchJWKS())[kid];
+    if (!jwk) jwk = (await this.fetchJWKS({ force: true }))[kid];
     return jwk;
   }
   async verifyCallback(
