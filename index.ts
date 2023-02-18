@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createPrivateKey, createPublicKey, verify } from "node:crypto";
+import { verify } from "node:crypto";
 
 export type PayconiqEnvironments = "PROD" | "EXT";
 export type PayconiqQRCodeFormat = "PNG" | "SVG";
@@ -89,6 +89,21 @@ type PayconiqLinks = {
     href?: string;
   };
 };
+export type PayconiqCallbackBody = {
+  paymentId: string;
+  amount: number;
+  transferAmount: number;
+  tippingAmount: number;
+  totalAmount: number;
+  currency?: "EUR";
+  description?: string;
+  reference?: string;
+  createdAt: string;
+  expiresAt: string;
+  succeededAt?: string;
+  status: PayconiqStatusCodes;
+  debtor: PayconiqDebtor;
+};
 export type PayconiqPOSResponseBody = {
   paymentId: string;
   status: PayconiqStatusCodes;
@@ -128,7 +143,7 @@ export class PayconiqCallbackVerificationError extends Error {
   constructor(message: string, category?: string) {
     super(message);
     this.name = "PayconiqCallbackVerificationError";
-    this.category = (category ?? message.split(" ")[0].toUpperCase()) as PayconiqCallbackVerificationErrorCategories;
+    this.category = (category ?? message.split(" ")[0]?.toUpperCase()) as PayconiqCallbackVerificationErrorCategories;
     Object.setPrototypeOf(this, PayconiqCallbackVerificationError.prototype);
   }
 }
@@ -174,7 +189,7 @@ export default class PayconiqProduct {
   defQRCodeOpts: PayconiqQRCodeOptions;
   readonly environment: PayconiqEnvironments;
   readonly verifier: PayconiqVerify | PayconiqVerifyEXT;
-  #apiKey: string;
+  // #apiKey: string;
   constructor(
     ppid: string,
     apiKey: string,
@@ -190,7 +205,7 @@ export default class PayconiqProduct {
         ? new PayconiqVerify({ product: this, callbackURL })
         : new PayconiqVerifyEXT({ product: this, callbackURL });
     assert(typeof apiKey === "string" && apiKey.length === 36, "Invalid API key");
-    this.#apiKey = apiKey;
+    // this.#apiKey = apiKey;
   }
   async fetchJWKS({ JWKS, force = false }: { JWKS?: PayconiqJWKS; force?: boolean } = { force: false }) {
     return (this.environment === "PROD" ? PayconiqVerify : PayconiqVerifyEXT).fetchJWKS({ JWKS, force });
@@ -317,10 +332,10 @@ export class PayconiqPredefined extends PayconiqProduct {
   }
 }
 export class PayconiqInvoice extends PayconiqProduct {
-  #apiKey: string;
+  // #apiKey: string;
   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
     super(ppid, apiKey, productOptions);
-    this.#apiKey = apiKey;
+    // this.#apiKey = apiKey;
   }
   assertInvoiceInfo(invoiceInfo: PayconiqReceiptOrInvoiceInfo) {
     assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
@@ -346,10 +361,10 @@ export class PayconiqInvoice extends PayconiqProduct {
   }
 }
 export class PayconiqReceipt extends PayconiqProduct {
-  #apiKey: string;
+  // #apiKey: string;
   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
     super(ppid, apiKey, productOptions);
-    this.#apiKey = apiKey;
+    // this.#apiKey = apiKey;
   }
   assertReceiptInfo(receiptInfo: PayconiqReceiptOrInvoiceInfo) {
     assert(receiptInfo.amount >= 1 && receiptInfo.amount <= 999999, "Invalid amount");
@@ -395,22 +410,25 @@ export class PayconiqVerify {
   }
   static #JWKPath = "https://payconiq.com/certificates";
   static #JWKS: PayconiqJWKSbyKid;
-  static #lastJWKSFetch: number;
+  static #lastJWKSFetch: number = 0;
   static async fetchJWKS(
     { JWKS, force = false, lastUpdate: lastFetch }: { JWKS?: PayconiqJWKS; force?: boolean; lastUpdate?: number } = {
       force: false,
     },
   ) {
     if (
-      JWKS === null &&
+      JWKS === undefined &&
       (force || this.#JWKS === undefined || this.#lastJWKSFetch + PAYCONIQJWKLIFETIMEMS < Date.now())
     ) {
+      this.#lastJWKSFetch = lastFetch ?? Date.now();
       const jwksResponse = await fetch(this.#JWKPath);
       JWKS = ((await jwksResponse.json()) as { keys: PayconiqJWK[] }).keys.filter(
         (key) =>
-          key.use === "sig" && key.kty === "RSA" && key.alg === "RS256" && key.kid && typeof key.x5c[0] === "string",
+          key.use === "sig" &&
+          ((key.kty === "RSA" && key.alg === "RS256") || (key.kty === "EC" && key.alg === "ES256")) &&
+          key.kid &&
+          typeof key.x5c[0] === "string",
       );
-      this.#lastJWKSFetch = lastFetch ?? Date.now();
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
     return this.#JWKS;
@@ -423,24 +441,19 @@ export class PayconiqVerify {
   async verifyCallback(
     signature: string,
     body: string,
-    {
-      pqProductInstance: pqProductInstance,
-      maxAgeMs = 5000,
-      now,
-      callbackURL,
-    }: { pqProductInstance?: PayconiqProduct | null; maxAgeMs?: number; now?: number; callbackURL?: string | null } = {
+    { maxAgeMs = 5000, now, callbackURL }: { maxAgeMs?: number; now?: number; callbackURL?: string | null } = {
       maxAgeMs: 5000,
     },
   ) {
     const match = signature.match(PAYCONIQSIGNATUREREGEX);
-    if (pqProductInstance === undefined) throw new PCBVError("Missing payconiq product instance");
+    if (this.product === undefined) throw new PCBVError("Missing payconiq product instance");
     if (match === null) throw new PCBVError("Incorrect compact detached signature");
     const protectedHeader = match[1] as string;
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
     if (header.alg !== "ES256") throw new PCBVError("Unsupported algorithm");
     if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
-    if (pqProductInstance && header["https://payconiq.com/sub"] !== pqProductInstance.ppid)
+    if (this.product && header["https://payconiq.com/sub"] !== this.product.ppid)
       throw new PCBVError("Invalid subject");
     callbackURL = callbackURL ?? this.callbackURL;
     if (callbackURL === undefined) throw new PCBVError("Missing callbackURL");
@@ -448,7 +461,6 @@ export class PayconiqVerify {
     now = now ?? Date.now();
     const iat = Date.parse(header["https://payconiq.com/iat"]);
     if (now - iat > maxAgeMs || iat - now > 100) {
-      console.warn(`Invalid issued at: ${iat} .:. ${now}`);
       throw new PCBVError("Invalid issued at");
     }
     // TODO jti check
@@ -458,7 +470,7 @@ export class PayconiqVerify {
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
       { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk as any },
-      Buffer.from(match[2], "base64url"),
+      Buffer.from(match[2]!, "base64url"),
     );
     if (!verified) throw new PCBVError("Failed verfication");
     return true;
@@ -473,20 +485,23 @@ export class PayconiqVerifyEXT {
   }
   static #JWKPath = "https://ext.payconiq.com/certificates";
   static #JWKS: PayconiqJWKSbyKid;
-  static #lastJWKSFetch: number;
+  static #lastJWKSFetch: number = 0;
   static async fetchJWKS(
     { JWKS, force = false, lastFetch }: { JWKS?: PayconiqJWKS; force?: boolean; lastFetch?: number } = { force: false },
   ) {
     if (
-      JWKS === null &&
+      JWKS === undefined &&
       (force || this.#JWKS === undefined || this.#lastJWKSFetch + PAYCONIQJWKLIFETIMEMS < Date.now())
     ) {
+      this.#lastJWKSFetch = lastFetch ?? Date.now();
       const jwksResponse = await fetch(this.#JWKPath);
       JWKS = ((await jwksResponse.json()) as { keys: PayconiqJWK[] }).keys.filter(
         (key) =>
-          key.use === "sig" && key.kty === "RSA" && key.alg === "RS256" && key.kid && typeof key.x5c[0] === "string",
+          key.use === "sig" &&
+          ((key.kty === "RSA" && key.alg === "RS256") || (key.kty === "EC" && key.alg === "ES256")) &&
+          key.kid &&
+          typeof key.x5c[0] === "string",
       );
-      this.#lastJWKSFetch = lastFetch ?? Date.now();
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
     return this.#JWKS;
@@ -499,24 +514,19 @@ export class PayconiqVerifyEXT {
   async verifyCallback(
     signature: string,
     body: string,
-    {
-      pqProductInstance: pqProductInstance,
-      maxAgeMs = 5000,
-      now,
-      callbackURL,
-    }: { pqProductInstance?: PayconiqProduct | null; maxAgeMs?: number; now?: number; callbackURL?: string | null } = {
+    { maxAgeMs = 5000, now, callbackURL }: { maxAgeMs?: number; now?: number; callbackURL?: string | null } = {
       maxAgeMs: 5000,
     },
   ) {
     const match = signature.match(PAYCONIQSIGNATUREREGEX);
-    if (pqProductInstance === undefined) throw new PCBVError("Missing payconiq product instance");
+    if (this.product === undefined) throw new PCBVError("Missing payconiq product instance");
     if (match === null) throw new PCBVError("Incorrect compact detached signature");
     const protectedHeader = match[1] as string;
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
     if (header.alg !== "ES256") throw new PCBVError("Unsupported algorithm");
     if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
-    if (pqProductInstance && header["https://payconiq.com/sub"] !== pqProductInstance.ppid)
+    if (this.product && header["https://payconiq.com/sub"] !== this.product.ppid)
       throw new PCBVError("Invalid subject");
     callbackURL = callbackURL ?? this.callbackURL;
     if (callbackURL === undefined) throw new PCBVError("Missing callbackURL");
@@ -524,7 +534,6 @@ export class PayconiqVerifyEXT {
     now = now ?? Date.now();
     const iat = Date.parse(header["https://payconiq.com/iat"]);
     if (now - iat > maxAgeMs || iat - now > 100) {
-      console.warn(`Invalid issued at: ${iat} .:. ${now}`);
       throw new PCBVError("Invalid issued at");
     }
     // TODO jti check
@@ -534,7 +543,7 @@ export class PayconiqVerifyEXT {
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
       { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk as any },
-      Buffer.from(match[2], "base64url"),
+      Buffer.from(match[2]!, "base64url"),
     );
     if (!verified) throw new PCBVError("Failed verfication");
     return true;

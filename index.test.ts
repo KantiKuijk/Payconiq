@@ -18,16 +18,15 @@ test("fail on incorrect apiKey", () => {
 
 const apiKey = "APIkeytestAPIkeytestAPIkeytestAPIkey";
 
-const pqProduct = new PayconiqProduct(paymentId, apiKey);
-// const pqInstore = new PayconiqInstore(paymentId, apiKey);
+// const pqProduct = new PayconiqProduct(paymentId, apiKey);
 const pqPredefined = new PayconiqPredefined(paymentId, apiKey);
 const pqInvoice = new PayconiqInvoice(paymentId, apiKey);
-const pqReceipt = new PayconiqReceipt(paymentId, apiKey);
-const pqProductExt = new PayconiqProduct(paymentId, apiKey, { environment: "EXT" });
+// const pqReceipt = new PayconiqReceipt(paymentId, apiKey);
+// const pqProductExt = new PayconiqProduct(paymentId, apiKey, { environment: "EXT" });
 // const pqInstoreExt = new PayconiqInstore(paymentId, apiKey, { environment: "EXT" });
-const pqPredefinedExt = new PayconiqPredefined(paymentId, apiKey, { environment: "EXT" });
-const pqInvoiceExt = new PayconiqInvoice(paymentId, apiKey, { environment: "EXT" });
-const pqReceiptExt = new PayconiqReceipt(paymentId, apiKey, { environment: "EXT" });
+// const pqPredefinedExt = new PayconiqPredefined(paymentId, apiKey, { environment: "EXT" });
+// const pqInvoiceExt = new PayconiqInvoice(paymentId, apiKey, { environment: "EXT" });
+// const pqReceiptExt = new PayconiqReceipt(paymentId, apiKey, { environment: "EXT" });
 
 test("make the correct POS QR-code URL", () => {
   const posId = "testposid";
