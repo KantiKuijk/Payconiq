@@ -153,6 +153,17 @@ Eventhough no methods using the API key are implemented, it is still needed in t
 
 **`makeQRcode(invoiceInfoOrPaymentURL, qrCodeOpts)`** .:. Synchronously returns the URL-string of the QR-code for the given `invoiceInfo` or from a URL-string (deeplink) like the one returned from `makePayment`.
 
+## Utility and Others
+
+For your convenience an object mapping the product names (`"predefined"`, `"invoice"`, `"receipt"`) to their classes (`PayconiqPredefined`, `PayconiqInvoice`, `PayconiqReceipt`) is exported. Similarly two generic types are exported: `PayconiqProductTypeToClass` and `PayconiqProductTypeToInstance` mapping the same product names to their respective class types and instance types.
+
+Every product gets a `verifier` that is either of the class `PayconiqVerify` or `PayconiqVerifyEXT` depending on the environment.
+When the `verify` gets invalid parameters, it will throw an `PayconiqCallbackVerificationError`.
+
+A few request and response body types are exported, their names should be self-explanatory: `PayconiqResponseError`, `PayconiqCallbackBody`, `PayconiqPOSRequestBody`, `PayconiqPOSResponseBody`, and `PayconiqPOSCallbackBody` with subtypes `PayconiqDebtor`, `PayconiqCreditor`, `PayconiqLinks`.
+
+Most parameter types are exported as well: `PayconiqEnvironment`, `PayconiqQRCodeFormat`, `PayconiqQRCodeSize`, `PayconiqQRCodeColor`, `PayconiqQRCodeOptions`, `PayconiqReceiptOrInvoiceInfo`, `PayconiqJWK`, `PayconiqJWKS`, `PayconiqJWKSbyKid`, `PayconiqStatusCodes`, and `PayconiqProductType`.
+
 ## Missing Features
 
 This package does not include any features for partner integration or the following products: Terminal & Display, Custom Online, App2App, Top-up. The Static QR-code also called sticker, ECR sticker or some other confusing names, is not supported since Payconiq misses anything to be implemented (so no automation for this product except by webscraping the portal). This package cannot do payout reconciliation or help with refund services. The supported products are only partly so, in that they miss features for getting payments, getting a payment list or refunding.

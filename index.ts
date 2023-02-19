@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { verify } from "node:crypto";
 
-export type PayconiqEnvironments = "PROD" | "EXT";
+export type PayconiqEnvironment = "PROD" | "EXT";
 export type PayconiqQRCodeFormat = "PNG" | "SVG";
 export type PayconiqQRCodeSize = "S" | "M" | "L" | "XL";
 export type PayconiqQRCodeColor = "magenta" | "black";
@@ -29,11 +29,7 @@ export type PayconiqJWKS = PayconiqJWK[];
 export type PayconiqJWKSbyKid = {
   [key: string]: PayconiqJWK;
 };
-type PayconiqDebtor = {
-  name?: string;
-  iban?: string;
-};
-type PayconiqStatusCodes =
+export type PayconiqStatusCodes =
   | "PENDING"
   | "IDENTIFIED"
   | "AUTHORIZED"
@@ -42,40 +38,18 @@ type PayconiqStatusCodes =
   | "FAILED"
   | "CANCELLED"
   | "EXPIRED";
-export type PayconiqPOSCallbackBody = {
-  paymentId: string;
-  amount: number;
-  transferAmount: number;
-  tippingAmount: number;
-  totalAmount: number;
-  currency?: "EUR";
-  description?: string;
-  reference?: string;
-  createdAt: string;
-  expiresAt: string;
-  succeededAt: string;
-  status: PayconiqStatusCodes;
-  debtor: PayconiqDebtor;
+export type PayconiqDebtor = {
+  name?: string;
+  iban?: string;
 };
-export type PayconiqPOSRequestBody = {
-  amount: number;
-  callbackUrl?: string;
-  currency?: "EUR";
-  description?: string;
-  reference?: string;
-  bulkId?: string;
-  posId: string;
-  shopId?: string;
-  shopName?: string;
-};
-type PayconiqCreditor = {
+export type PayconiqCreditor = {
   profileId: string;
   merchantId: string;
   name: string;
   iban: string;
   callbackUrl?: string;
 };
-type PayconiqLinks = {
+export type PayconiqLinks = {
   self?: {
     href?: string;
   };
@@ -88,33 +62,6 @@ type PayconiqLinks = {
   cancel?: {
     href?: string;
   };
-};
-export type PayconiqCallbackBody = {
-  paymentId: string;
-  amount: number;
-  transferAmount: number;
-  tippingAmount: number;
-  totalAmount: number;
-  currency?: "EUR";
-  description?: string;
-  reference?: string;
-  createdAt: string;
-  expiresAt: string;
-  succeededAt?: string;
-  status: PayconiqStatusCodes;
-  debtor: PayconiqDebtor;
-};
-export type PayconiqPOSResponseBody = {
-  paymentId: string;
-  status: PayconiqStatusCodes;
-  createdAt: string;
-  expiresAt: string;
-  description?: string;
-  reference?: string;
-  amount: number;
-  currency?: "EUR";
-  creditor: PayconiqCreditor;
-  _links: PayconiqLinks;
 };
 export type PayconiqResponseError = {
   code:
@@ -134,6 +81,59 @@ export type PayconiqResponseError = {
   message: string;
   traceId: string;
   spanId: string;
+};
+export type PayconiqCallbackBody = {
+  paymentId: string;
+  amount: number;
+  transferAmount: number;
+  tippingAmount: number;
+  totalAmount: number;
+  currency?: "EUR";
+  description?: string;
+  reference?: string;
+  createdAt: string;
+  expiresAt: string;
+  succeededAt?: string;
+  status: PayconiqStatusCodes;
+  debtor?: PayconiqDebtor;
+};
+export type PayconiqPOSRequestBody = {
+  amount: number;
+  callbackUrl?: string;
+  currency?: "EUR";
+  description?: string;
+  reference?: string;
+  bulkId?: string;
+  posId: string;
+  shopId?: string;
+  shopName?: string;
+};
+export type PayconiqPOSResponseBody = {
+  paymentId: string;
+  status: PayconiqStatusCodes;
+  createdAt: string;
+  expiresAt: string;
+  description?: string;
+  reference?: string;
+  amount: number;
+  currency?: "EUR";
+  creditor: PayconiqCreditor;
+  _links: PayconiqLinks;
+};
+export type PayconiqPOSCallbackBody = {
+  paymentId: string;
+  amount: number;
+  transferAmount: number;
+  tippingAmount: number;
+  totalAmount: number;
+  currency?: "EUR";
+  description?: string;
+  reference?: string;
+  createdAt: string;
+  expiresAt: string;
+  succeededAt: string;
+  status: PayconiqStatusCodes;
+  debtor: PayconiqDebtor;
 };
 
 export type PayconiqCallbackVerificationErrorCategories = "INCORRECT" | "INVALID" | "FAILED" | "UNSUPPORTED";
@@ -180,14 +180,14 @@ export type PayconiqProductTypeToInstance<T extends PayconiqProductType> =
 export type PayconiqProductOptions = {
   callbackURL?: string | null;
   defQRCodeOpts?: PayconiqQRCodeOptions;
-  environment?: PayconiqEnvironments;
+  environment?: PayconiqEnvironment;
 };
 
 export default class PayconiqProduct {
   ppid: string;
   readonly callbackURL: string | null | undefined;
   defQRCodeOpts: PayconiqQRCodeOptions;
-  readonly environment: PayconiqEnvironments;
+  readonly environment: PayconiqEnvironment;
   readonly verifier: PayconiqVerify | PayconiqVerifyEXT;
   // #apiKey: string;
   constructor(
