@@ -29,7 +29,7 @@ export type PayconiqJWKS = PayconiqJWK[];
 export type PayconiqJWKSbyKid = {
   [key: string]: PayconiqJWK;
 };
-export type PayconiqStatusCodes =
+export type PayconiqStatusCode =
   | "PENDING"
   | "IDENTIFIED"
   | "AUTHORIZED"
@@ -94,7 +94,7 @@ export type PayconiqCallbackBody = {
   createdAt: string;
   expiresAt: string;
   succeededAt?: string;
-  status: PayconiqStatusCodes;
+  status: PayconiqStatusCode;
   debtor?: PayconiqDebtor;
 };
 export type PayconiqPOSRequestBody = {
@@ -110,7 +110,7 @@ export type PayconiqPOSRequestBody = {
 };
 export type PayconiqPOSResponseBody = {
   paymentId: string;
-  status: PayconiqStatusCodes;
+  status: PayconiqStatusCode;
   createdAt: string;
   expiresAt: string;
   description?: string;
@@ -132,7 +132,7 @@ export type PayconiqPOSCallbackBody = {
   createdAt: string;
   expiresAt: string;
   succeededAt: string;
-  status: PayconiqStatusCodes;
+  status: PayconiqStatusCode;
   debtor: PayconiqDebtor;
 };
 

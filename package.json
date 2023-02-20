@@ -1,7 +1,7 @@
 {
   "name": "payconiq",
-  "version": "0.0.0",
-  "description": "Node.js API for interacting with the Payconiq V3 API",
+  "version": "0.1.0",
+  "description": "Node.js implementation for interacting with the Payconiq V3 API",
   "main": "index.js",
   "scripts": {
     "test": "jest --config jestconfig.json",
