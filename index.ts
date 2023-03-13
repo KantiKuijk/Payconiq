@@ -469,7 +469,7 @@ export class PayconiqVerify {
     const verified = verify(
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
-      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk as any },
+      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk },
       Buffer.from(match[2]!, "base64url"),
     );
     if (!verified) throw new PCBVError("Failed verfication");
@@ -536,13 +536,13 @@ export class PayconiqVerifyEXT {
     if (now - iat > maxAgeMs || iat - now > 100) {
       throw new PCBVError("Invalid issued at");
     }
-    // TODO jti check
+    // no way to do a jti check
     const jwk = await PayconiqVerifyEXT.#getJWK(header.kid);
     if (!jwk) throw new PCBVError("Missing kid");
     const verified = verify(
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
-      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk as any },
+      { dsaEncoding: "ieee-p1363", format: "jwk", key: jwk },
       Buffer.from(match[2]!, "base64url"),
     );
     if (!verified) throw new PCBVError("Failed verfication");
