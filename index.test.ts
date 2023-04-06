@@ -64,6 +64,13 @@ test("make the correct invoice URL", () => {
   expect(pqInvoice.makePayment({ amount: 1254, description: "this is a description", reference: "referenceXYZ" })).toBe(
     `https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`,
   );
+  expect(pqInvoice.makePayment({ amount: "24574" })).toBe(`https://payconiq.com/t/1/${paymentId}?A=24574`);
+  expect(pqInvoice.makePayment({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://payconiq.com/t/1/${paymentId}?A=1254&R=referenceXYZ`,
+  );
+  expect(
+    pqInvoice.makePayment({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(`https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`);
 });
 test("make the correct invoice QR-code URL", () => {
   expect(pqInvoice.makeQRcode({ amount: 24574 })).toBe(
@@ -73,6 +80,17 @@ test("make the correct invoice QR-code URL", () => {
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ`,
   );
   expect(pqInvoice.makeQRcode({ amount: 1254, description: "this is a description", reference: "referenceXYZ" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
+  );
+  expect(pqInvoice.makeQRcode({ amount: "24574" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574`,
+  );
+  expect(pqInvoice.makeQRcode({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ`,
+  );
+  expect(
+    pqInvoice.makeQRcode({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
   );
 });
@@ -91,6 +109,30 @@ test("make the correct invoice QR-code URL with options", () => {
   ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
   );
+  expect(pqInvoice.makeQRcode({ amount: "24574" }, { color: "black" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574&cl=black`,
+  );
+  expect(pqInvoice.makeQRcode({ amount: "1254", reference: "referenceXYZ" }, { color: "magenta", size: "S" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ&s=S&cl=magenta`,
+  );
+  expect(
+    pqInvoice.makeQRcode(
+      { amount: "1254", description: "this is a description", reference: "referenceXYZ" },
+      { format: "PNG", size: "L" },
+    ),
+  ).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
+  );
+});
+test("fail on invalid invoice amount", () => {
+  expect(() => pqInvoice.makePayment({ amount: "" })).toThrow("Invalid amount");
+  expect(() => pqInvoice.makePayment({ amount: 0 })).toThrow("Invalid amount");
+  expect(pqInvoice.makePayment({ amount: 1 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=1`);
+  expect(pqInvoice.makePayment({ amount: 999999 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=999999`);
+  expect(() => pqInvoice.makePayment({ amount: 1000000, reference: "referenceXYZ" })).toThrow("Invalid amount");
+  expect(() =>
+    pqInvoice.makePayment({ amount: "foobar", description: "this is a description", reference: "referenceXYZ" }),
+  ).toThrow("Invalid amount");
 });
 
 test("make the correct receipt URL", () => {
@@ -101,6 +143,13 @@ test("make the correct receipt URL", () => {
   expect(pqReceipt.makePayment({ amount: 1254, description: "this is a description", reference: "referenceXYZ" })).toBe(
     `https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`,
   );
+  expect(pqReceipt.makePayment({ amount: "24574" })).toBe(`https://payconiq.com/t/1/${paymentId}?A=24574`);
+  expect(pqReceipt.makePayment({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://payconiq.com/t/1/${paymentId}?A=1254&R=referenceXYZ`,
+  );
+  expect(
+    pqReceipt.makePayment({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(`https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`);
 });
 test("make the correct receipt QR-code URL", () => {
   expect(pqReceipt.makeQRcode({ amount: 24574 })).toBe(
@@ -110,6 +159,17 @@ test("make the correct receipt QR-code URL", () => {
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ`,
   );
   expect(pqReceipt.makeQRcode({ amount: 1254, description: "this is a description", reference: "referenceXYZ" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
+  );
+  expect(pqReceipt.makeQRcode({ amount: "24574" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574`,
+  );
+  expect(pqReceipt.makeQRcode({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ`,
+  );
+  expect(
+    pqReceipt.makeQRcode({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
   );
 });
@@ -128,6 +188,30 @@ test("make the correct receipt QR-code URL with options", () => {
   ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
   );
+  expect(pqReceipt.makeQRcode({ amount: "24574" }, { color: "black" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574&cl=black`,
+  );
+  expect(pqReceipt.makeQRcode({ amount: "1254", reference: "referenceXYZ" }, { color: "magenta", size: "S" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ&s=S&cl=magenta`,
+  );
+  expect(
+    pqReceipt.makeQRcode(
+      { amount: "1254", description: "this is a description", reference: "referenceXYZ" },
+      { format: "PNG", size: "L" },
+    ),
+  ).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
+  );
+});
+test("fail on invalid receipt amount", () => {
+  expect(() => pqReceipt.makePayment({ amount: "" })).toThrow("Invalid amount");
+  expect(() => pqReceipt.makePayment({ amount: 0 })).toThrow("Invalid amount");
+  expect(pqReceipt.makePayment({ amount: 1 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=1`);
+  expect(pqReceipt.makePayment({ amount: 999999 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=999999`);
+  expect(() => pqReceipt.makePayment({ amount: 1000000, reference: "referenceXYZ" })).toThrow("Invalid amount");
+  expect(() =>
+    pqReceipt.makePayment({ amount: "foobar", description: "this is a description", reference: "referenceXYZ" }),
+  ).toThrow("Invalid amount");
 });
 
 test("make the correct POS QR-code URL [EXT]", () => {
@@ -170,6 +254,13 @@ test("make the correct invoice URL [EXT]", () => {
   expect(
     pqInvoiceExt.makePayment({ amount: 1254, description: "this is a description", reference: "referenceXYZ" }),
   ).toBe(`https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`);
+  expect(pqInvoiceExt.makePayment({ amount: "24574" })).toBe(`https://payconiq.com/t/1/${paymentId}?A=24574`);
+  expect(pqInvoiceExt.makePayment({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://payconiq.com/t/1/${paymentId}?A=1254&R=referenceXYZ`,
+  );
+  expect(
+    pqInvoiceExt.makePayment({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(`https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`);
 });
 test("make the correct invoice QR-code URL [EXT]", () => {
   expect(pqInvoiceExt.makeQRcode({ amount: 24574 })).toBe(
@@ -180,6 +271,17 @@ test("make the correct invoice QR-code URL [EXT]", () => {
   );
   expect(
     pqInvoiceExt.makeQRcode({ amount: 1254, description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
+  );
+  expect(pqInvoiceExt.makeQRcode({ amount: "24574" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574`,
+  );
+  expect(pqInvoiceExt.makeQRcode({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ`,
+  );
+  expect(
+    pqInvoiceExt.makeQRcode({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
   ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
   );
@@ -199,6 +301,30 @@ test("make the correct invoice QR-code URL with options [EXT]", () => {
   ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
   );
+  expect(pqInvoiceExt.makeQRcode({ amount: "24574" }, { color: "black" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574&cl=black`,
+  );
+  expect(pqInvoiceExt.makeQRcode({ amount: "1254", reference: "referenceXYZ" }, { color: "magenta", size: "S" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ&s=S&cl=magenta`,
+  );
+  expect(
+    pqInvoiceExt.makeQRcode(
+      { amount: "1254", description: "this is a description", reference: "referenceXYZ" },
+      { format: "PNG", size: "L" },
+    ),
+  ).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
+  );
+});
+test("fail on invalid invoice amount [EXT]", () => {
+  expect(() => pqInvoiceExt.makePayment({ amount: "" })).toThrow("Invalid amount");
+  expect(() => pqInvoiceExt.makePayment({ amount: 0 })).toThrow("Invalid amount");
+  expect(pqInvoiceExt.makePayment({ amount: 1 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=1`);
+  expect(pqInvoiceExt.makePayment({ amount: 999999 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=999999`);
+  expect(() => pqInvoiceExt.makePayment({ amount: 1000000, reference: "referenceXYZ" })).toThrow("Invalid amount");
+  expect(() =>
+    pqInvoiceExt.makePayment({ amount: "foobar", description: "this is a description", reference: "referenceXYZ" }),
+  ).toThrow("Invalid amount");
 });
 
 test("make the correct receipt URL [EXT]", () => {
@@ -208,6 +334,13 @@ test("make the correct receipt URL [EXT]", () => {
   );
   expect(
     pqReceiptExt.makePayment({ amount: 1254, description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(`https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`);
+  expect(pqReceiptExt.makePayment({ amount: "24574" })).toBe(`https://payconiq.com/t/1/${paymentId}?A=24574`);
+  expect(pqReceiptExt.makePayment({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://payconiq.com/t/1/${paymentId}?A=1254&R=referenceXYZ`,
+  );
+  expect(
+    pqReceiptExt.makePayment({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
   ).toBe(`https://payconiq.com/t/1/${paymentId}?A=1254&D=this+is+a+description&R=referenceXYZ`);
 });
 test("make the correct receipt QR-code URL [EXT]", () => {
@@ -219,6 +352,17 @@ test("make the correct receipt QR-code URL [EXT]", () => {
   );
   expect(
     pqReceiptExt.makeQRcode({ amount: 1254, description: "this is a description", reference: "referenceXYZ" }),
+  ).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
+  );
+  expect(pqReceiptExt.makeQRcode({ amount: "24574" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574`,
+  );
+  expect(pqReceiptExt.makeQRcode({ amount: "1254", reference: "referenceXYZ" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ`,
+  );
+  expect(
+    pqReceiptExt.makeQRcode({ amount: "1254", description: "this is a description", reference: "referenceXYZ" }),
   ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ`,
   );
@@ -238,4 +382,28 @@ test("make the correct receipt QR-code URL with options [EXT]", () => {
   ).toBe(
     `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
   );
+  expect(pqReceiptExt.makeQRcode({ amount: "24574" }, { color: "black" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D24574&cl=black`,
+  );
+  expect(pqReceiptExt.makeQRcode({ amount: "1254", reference: "referenceXYZ" }, { color: "magenta", size: "S" })).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26R%3DreferenceXYZ&s=S&cl=magenta`,
+  );
+  expect(
+    pqReceiptExt.makeQRcode(
+      { amount: "1254", description: "this is a description", reference: "referenceXYZ" },
+      { format: "PNG", size: "L" },
+    ),
+  ).toBe(
+    `https://portal.payconiq.com/qrcode?c=https%3A%2F%2Fpayconiq.com%2Ft%2F1%2F${paymentId}%3FA%3D1254%26D%3Dthis%2Bis%2Ba%2Bdescription%26R%3DreferenceXYZ&f=PNG&s=L`,
+  );
+});
+test("fail on invalid receipt amount [EXT]", () => {
+  expect(() => pqReceiptExt.makePayment({ amount: "" })).toThrow("Invalid amount");
+  expect(() => pqReceiptExt.makePayment({ amount: 0 })).toThrow("Invalid amount");
+  expect(pqReceiptExt.makePayment({ amount: 1 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=1`);
+  expect(pqReceiptExt.makePayment({ amount: 999999 })).toBe(`https://payconiq.com/t/1/${paymentId}?A=999999`);
+  expect(() => pqReceiptExt.makePayment({ amount: 1000000, reference: "referenceXYZ" })).toThrow("Invalid amount");
+  expect(() =>
+    pqReceiptExt.makePayment({ amount: "foobar", description: "this is a description", reference: "referenceXYZ" }),
+  ).toThrow("Invalid amount");
 });

@@ -2,7 +2,7 @@
 
 ## **Node.js implementation for interacting with the Payconiq V3 API**
 
-> _Disclaimer: this is not an official package from Payconiq International or any affiliated owners of a Payconiq brand. This is my own implementation following the [API Docs](https://developer.payconiq.com). In no way do I make any guarantees that this code is valid, safe, or well-written. That being said, I wrote this code for my own use, and if you want to use it in your project(s), you're free to do so._
+> _Disclaimer: this is not an official package from Bancontact Payconiq Company or any affiliated entities or subsidiaries. This is my own implementation following the [API Docs](https://developer.payconiq.com). In no way do I make any guarantees that this code is valid, safe, or well-written. That being said, I wrote this code for my own use, and if you want to use it in your project(s), you're free to do so in accordance to the license._
 
 Payconiq is a Belgian digital payment provider with different products. This package aims to have a simpler way of using the [Payconiq API V3](https://developer.payconiq.com/online-payments-dock/#payment-api-version-3-v3-).
 
@@ -20,7 +20,7 @@ This package is in no way feature-complete. I needed to use the Payconiq API for
 
 Install using npm:
 
-```
+```console
 npm install payconiq
 ```
 

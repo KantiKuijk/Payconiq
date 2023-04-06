@@ -150,13 +150,6 @@ export class PayconiqCallbackVerificationError extends Error {
 const PCBVError = PayconiqCallbackVerificationError;
 
 export type PayconiqProductType = "predefined" | "invoice" | "receipt"; // | "instore";
-/* TODO: Maak een verschillende class per product type
- * zodat hun methodes soort van gelijk benoemd kunnen zijn:
- * - makeQRCode (alle)
- * - verify (alle)
- * - makePayment (predefined, invoice, receipt?)
- * - deletePayment (predefined)
- */
 export type PayconiqProductTypeToClass<T extends PayconiqProductType> =
   // T extends "instore"
   // ? typeof PayconiqInstore :
@@ -338,7 +331,7 @@ export class PayconiqInvoice extends PayconiqProduct {
     // this.#apiKey = apiKey;
   }
   assertInvoiceInfo(invoiceInfo: PayconiqReceiptOrInvoiceInfo) {
-    assert(invoiceInfo.amount >= 1 && invoiceInfo.amount <= 999999, "Invalid amount");
+    assert(Number(invoiceInfo.amount) >= 1 && Number(invoiceInfo.amount) <= 999999, "Invalid amount");
     if (invoiceInfo.description) assert(invoiceInfo.description.length <= 35, "Description too long");
     if (invoiceInfo.reference) assert(invoiceInfo.reference.length <= 35, "Reference too long");
   }
@@ -367,7 +360,7 @@ export class PayconiqReceipt extends PayconiqProduct {
     // this.#apiKey = apiKey;
   }
   assertReceiptInfo(receiptInfo: PayconiqReceiptOrInvoiceInfo) {
-    assert(receiptInfo.amount >= 1 && receiptInfo.amount <= 999999, "Invalid amount");
+    assert(Number(receiptInfo.amount) >= 1 && Number(receiptInfo.amount) <= 999999, "Invalid amount");
     if (receiptInfo.description) assert(receiptInfo.description.length <= 35, "Description too long");
     if (receiptInfo.reference) assert(receiptInfo.reference.length <= 35, "Reference too long");
   }
@@ -463,7 +456,6 @@ export class PayconiqVerify {
     if (now - iat > maxAgeMs || iat - now > 100) {
       throw new PCBVError("Invalid issued at");
     }
-    // TODO jti check
     const jwk = await PayconiqVerify.#getJWK(header.kid);
     if (!jwk) throw new PCBVError("Missing kid");
     const verified = verify(
