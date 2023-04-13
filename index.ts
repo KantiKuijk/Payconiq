@@ -29,6 +29,25 @@ export type PayconiqJWKS = PayconiqJWK[];
 export type PayconiqJWKSbyKid = {
   [key: string]: PayconiqJWK;
 };
+const payconiqCritHeaders = [
+  "https://payconiq.com/sub",
+  "https://payconiq.com/iss",
+  "https://payconiq.com/iat",
+  "https://payconiq.com/jti",
+  "https://payconiq.com/path",
+] as const;
+type PayconiqCritHeader = (typeof payconiqCritHeaders)[number];
+export type PayconiqJOSEHeader = {
+  typ: string; //"jose+json";
+  alg: string;
+  kid: string;
+  crit: [PayconiqCritHeader, PayconiqCritHeader, PayconiqCritHeader, PayconiqCritHeader, PayconiqCritHeader];
+  "https://payconiq.com/sub": string;
+  "https://payconiq.com/iss": string; // "Payconiq";
+  "https://payconiq.com/iat": string;
+  "https://payconiq.com/jti": string;
+  "https://payconiq.com/path": string;
+};
 export type PayconiqStatusCode =
   | "PENDING"
   | "IDENTIFIED"
@@ -175,6 +194,47 @@ export type PayconiqProductOptions = {
   defQRCodeOpts?: PayconiqQRCodeOptions;
   environment?: PayconiqEnvironment;
 };
+
+function isPayconiqJOSEHeader(header: unknown): header is PayconiqJOSEHeader {
+  if (typeof header !== "object" || header === null) return false;
+  if (
+    !("typ" in header) ||
+    !("alg" in header) ||
+    !("kid" in header) ||
+    !("crit" in header) ||
+    !("https://payconiq.com/sub" in header) ||
+    !("https://payconiq.com/iss" in header) ||
+    !("https://payconiq.com/iat" in header) ||
+    !("https://payconiq.com/jti" in header) ||
+    !("https://payconiq.com/path" in header)
+  )
+    return false;
+  const {
+    typ,
+    alg,
+    kid,
+    crit,
+    "https://payconiq.com/sub": sub,
+    "https://payconiq.com/iss": iss,
+    "https://payconiq.com/iat": iat,
+    "https://payconiq.com/jti": jti,
+    "https://payconiq.com/path": path,
+  } = header;
+  return (
+    typeof typ === "string" &&
+    // typ === "jose+json" &&
+    typeof alg === "string" &&
+    typeof kid === "string" &&
+    Array.isArray(crit) &&
+    crit.every((c) => typeof c === "string" && payconiqCritHeaders.includes(c)) &&
+    typeof sub === "string" &&
+    typeof iss === "string" &&
+    // iss === "Payconiq" &&
+    typeof iat === "string" &&
+    typeof jti === "string" &&
+    typeof path === "string"
+  );
+}
 
 export default class PayconiqProduct {
   ppid: string;
@@ -443,6 +503,7 @@ export class PayconiqVerify {
     if (match === null) throw new PCBVError("Incorrect compact detached signature");
     const protectedHeader = match[1] as string;
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
+    if (!isPayconiqJOSEHeader(header)) throw new PCBVError("Invalid header");
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
     if (header.alg !== "ES256") throw new PCBVError("Unsupported algorithm");
     if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
@@ -515,6 +576,7 @@ export class PayconiqVerifyEXT {
     if (match === null) throw new PCBVError("Incorrect compact detached signature");
     const protectedHeader = match[1] as string;
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
+    if (!isPayconiqJOSEHeader(header)) throw new PCBVError("Invalid header");
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
     if (header.alg !== "ES256") throw new PCBVError("Unsupported algorithm");
     if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
