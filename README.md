@@ -50,7 +50,7 @@ const isLegit = payconiqInvoicing.verify(signatureFromRequest, bodyFromRequest, 
 
 ## Quick Overview
 
-For every (implemented: predefined, invoice, receipt) URL-string product there is a class exported: `PayconiqPredefined`, `PayconiqInvoice`, and `PayconiqReceipt`. Since they all need an API key in their constructor **_it should only be used in the backend_**.
+For every (implemented: instore, predefined, invoice, receipt) URL-string product there is a class exported: `PayconiqInstore`, `PayconiqPredefined`, `PayconiqInvoice`, and `PayconiqReceipt`. Since they all need an API key in their constructor **_it should only be used in the backend_**.
 
 ## Common Across Products
 
@@ -69,7 +69,7 @@ The constructor parameters are the same for all product classes:
 
 ### Methods
 
-Every product has the same basic set of methods. However, their exact use may differ, mostly in being synchronous or asynchronous and its arguments.
+Every product has the same basic set of methods. However, their exact use may differ, mostly in being synchronous or asynchronous and its arguments. `PayconiqInstore` is the exception to the rule by not having a `makeQRcode` method at all.
 
 **`makePayment(…)`** .:. depends on the product where it may have to register the payment against URL-string servers or only generate a URL-string identifying a payment
 
@@ -95,11 +95,23 @@ The JWKS is lazily fetched and cached. So the first `verify` call will check if 
 
 ## Product classes
 
-Currently three products are partly implemented. Since Payconiq can't always make up their minds on how to call them, I chose to use `PayconiqPredefined`, `PayconiqInvoice`, and `PayconiqReceipt`.
+Currently three products are partly implemented. Since Payconiq can't always make up their minds on how to call them, I chose to use `PayconiqInstore`, `PayconiqPredefined`, `PayconiqInvoice`, and `PayconiqReceipt`.
 
 Payment amounts are always given in (euro)cents _(integer)_.
 
 Payconiq only allows `"EUR"` as currency but relevant methods still include it for completeness.
+
+### PayconiqInstore
+
+Also referred to as ECR sticker or just sticker.
+
+#### General info
+
+This product is just a fixed QR-code pointing to the merchant. The client inputs the payment amount. I have not found a way to make a link to get the QR-code containing the deeplink. So there is no `makeQRcode` method. Although I haven't been able to test it, Payconiq devs assured me these payments also trigger a callback.
+
+#### Methods
+
+**`makePayment()`** .:. Returns the URL-string that can be used as a deeplink.
 
 ### PayconiqPredefined
 
@@ -155,15 +167,15 @@ Eventhough no methods using the API key are implemented, it is still needed in t
 
 ## Utility and Others
 
-For your convenience an object mapping the product names (`"predefined"`, `"invoice"`, `"receipt"`) to their classes (`PayconiqPredefined`, `PayconiqInvoice`, `PayconiqReceipt`) is exported. Similarly two generic types are exported: `PayconiqProductTypeToClass` and `PayconiqProductTypeToInstance` mapping the same product names to their respective class types and instance types.
+For your convenience an object mapping the product names (`"instore"`, `"predefined"`, `"invoice"`, `"receipt"`) to their classes (`PayconiqInstore`, `PayconiqPredefined`, `PayconiqInvoice`, `PayconiqReceipt`) is exported. Similarly two generic types are exported: `PayconiqProductTypeToClass` and `PayconiqProductTypeToInstance` mapping the same product names to their respective class types and instance types.
 
 Every product gets a `verifier` that is either of the class `PayconiqVerify` or `PayconiqVerifyEXT` depending on the environment.
 When the `verify` gets invalid parameters, it will throw an `PayconiqCallbackVerificationError`.
 
-A few request and response body types are exported, their names should be self-explanatory: `PayconiqResponseError`, `PayconiqCallbackBody`, `PayconiqPOSRequestBody`, `PayconiqPOSResponseBody`, and `PayconiqPOSCallbackBody` with subtypes `PayconiqDebtor`, `PayconiqCreditor`, `PayconiqLinks`.
+A few request and response body types are exported, their names should be self-explanatory: `PayconiqResponseError`, `PayconiqCallbackBody`, `PayconiqPOSRequestBody`, `PayconiqPOSResponseBody`, `PayconiqPOSCallbackBody`, and `PayconiqJOSEHeader` with subtypes `PayconiqDebtor`, `PayconiqCreditor`, `PayconiqLinks`.
 
 Most parameter types are exported as well: `PayconiqEnvironment`, `PayconiqQRCodeFormat`, `PayconiqQRCodeSize`, `PayconiqQRCodeColor`, `PayconiqQRCodeOptions`, `PayconiqReceiptOrInvoiceInfo`, `PayconiqJWK`, `PayconiqJWKS`, `PayconiqJWKSbyKid`, `PayconiqStatusCodes`, and `PayconiqProductType`.
 
 ## Missing Features
 
-This package does not include any features for partner integration or the following products: Terminal & Display, Custom Online, App2App, Top-up. The Static QR-code also called sticker, ECR sticker or some other confusing names, is not supported since Payconiq misses anything to be implemented (so no automation for this product except by webscraping the portal). This package cannot do payout reconciliation or help with refund services. The supported products are only partly so, in that they miss features for getting payments, getting a payment list or refunding.
+This package does not include any features for partner integration or the following products: Terminal & Display, Custom Online, App2App, Top-up. This package cannot do payout reconciliation or help with refund services. The supported products are only partly so, in that they miss features for getting payments, getting a payment list or refunding.
