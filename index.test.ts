@@ -1,7 +1,8 @@
-import PayconiqProduct, { PayconiqInvoice, PayconiqPredefined, PayconiqReceipt } from ".";
+import PayconiqProduct, { PayconiqInstore, PayconiqInvoice, PayconiqPredefined, PayconiqReceipt } from ".";
 
 test("fail on incorrect paymentId", () => {
   expect(() => new PayconiqProduct("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
+  expect(() => new PayconiqInstore("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
   expect(() => new PayconiqPredefined("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
   expect(() => new PayconiqInvoice("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
   expect(() => new PayconiqReceipt("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
@@ -10,6 +11,7 @@ test("fail on incorrect paymentId", () => {
 const paymentId = "testPaymentIdpaymenTtesT";
 
 test("fail on incorrect apiKey", () => {
+  expect(() => new PayconiqInstore(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
   expect(() => new PayconiqPredefined(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
   expect(() => new PayconiqInvoice(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
   expect(() => new PayconiqReceipt(paymentId, "tooShortAPIKey")).toThrow("Invalid API key");
@@ -17,13 +19,18 @@ test("fail on incorrect apiKey", () => {
 
 const apiKey = "APIkeytestAPIkeytestAPIkeytestAPIkey";
 
+const pqInstore = new PayconiqInstore(paymentId, apiKey);
 const pqPredefined = new PayconiqPredefined(paymentId, apiKey);
 const pqInvoice = new PayconiqInvoice(paymentId, apiKey);
 const pqReceipt = new PayconiqReceipt(paymentId, apiKey);
+const pqInstoreExt = new PayconiqInstore(paymentId, apiKey, { environment: "EXT" });
 const pqPredefinedExt = new PayconiqPredefined(paymentId, apiKey, { environment: "EXT" });
 const pqInvoiceExt = new PayconiqInvoice(paymentId, apiKey, { environment: "EXT" });
 const pqReceiptExt = new PayconiqReceipt(paymentId, apiKey, { environment: "EXT" });
 
+test("make the correct instore URL", () => {
+  expect(pqInstore.makePayment()).toBe(`https://payconiq.com/merchant/1/${paymentId}`);
+});
 test("make the correct POS QR-code URL", () => {
   const posId = "testposid";
   expect(pqPredefined.makeQRcode(posId)).toBe(
@@ -214,6 +221,9 @@ test("fail on invalid receipt amount", () => {
   ).toThrow("Invalid amount");
 });
 
+test("make the correct instore URL [EXT]", () => {
+  expect(pqInstoreExt.makePayment()).toBe(`https://payconiq.com/merchant/1/${paymentId}`);
+});
 test("make the correct POS QR-code URL [EXT]", () => {
   const posId = "testposid";
   expect(pqPredefinedExt.makeQRcode(posId)).toBe(

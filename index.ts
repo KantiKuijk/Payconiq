@@ -168,27 +168,25 @@ export class PayconiqCallbackVerificationError extends Error {
 }
 const PCBVError = PayconiqCallbackVerificationError;
 
-export type PayconiqProductType = "predefined" | "invoice" | "receipt"; // | "instore";
-export type PayconiqProductTypeToClass<T extends PayconiqProductType> =
-  // T extends "instore"
-  // ? typeof PayconiqInstore :
-  T extends "predefined"
-    ? typeof PayconiqPredefined
-    : T extends "invoice"
-    ? typeof PayconiqInvoice
-    : T extends "receipt"
-    ? typeof PayconiqReceipt
-    : never;
-export type PayconiqProductTypeToInstance<T extends PayconiqProductType> =
-  // T extends "instore"
-  // ? PayconiqInstore :
-  T extends "predefined"
-    ? PayconiqPredefined
-    : T extends "invoice"
-    ? PayconiqInvoice
-    : T extends "receipt"
-    ? PayconiqReceipt
-    : never;
+export type PayconiqProductType = "predefined" | "invoice" | "receipt" | "instore";
+export type PayconiqProductTypeToClass<T extends PayconiqProductType> = T extends "instore"
+  ? typeof PayconiqInstore
+  : T extends "predefined"
+  ? typeof PayconiqPredefined
+  : T extends "invoice"
+  ? typeof PayconiqInvoice
+  : T extends "receipt"
+  ? typeof PayconiqReceipt
+  : never;
+export type PayconiqProductTypeToInstance<T extends PayconiqProductType> = T extends "instore"
+  ? PayconiqInstore
+  : T extends "predefined"
+  ? PayconiqPredefined
+  : T extends "invoice"
+  ? PayconiqInvoice
+  : T extends "receipt"
+  ? PayconiqReceipt
+  : never;
 export type PayconiqProductOptions = {
   callbackURL?: string | null;
   defQRCodeOpts?: PayconiqQRCodeOptions;
@@ -272,16 +270,16 @@ export default class PayconiqProduct {
   }
 }
 
-// export class PayconiqInstore extends PayconiqProduct {
-//   #apiKey: string;
-//   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
-//     super(ppid, apiKey, productOptions);
-//     this.#apiKey = apiKey;
-//   }
-//   makeQRcode() {
-//     return `HTTPS://PAYCONIQ.COM/MERCHANT/1/${this.ppid}`;
-//   }
-// }
+export class PayconiqInstore extends PayconiqProduct {
+  // #apiKey: string;
+  constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
+    super(ppid, apiKey, productOptions);
+    // this.#apiKey = apiKey;
+  }
+  makePayment() {
+    return `https://payconiq.com/merchant/1/${this.ppid}`;
+  }
+}
 export class PayconiqPredefined extends PayconiqProduct {
   #apiKey: string;
   constructor(ppid: string, apiKey: string, productOptions: PayconiqProductOptions = { environment: "PROD" }) {
@@ -447,7 +445,7 @@ export const PayconiqProducts: { [T in PayconiqProductType]: PayconiqProductType
   predefined: PayconiqPredefined,
   invoice: PayconiqInvoice,
   receipt: PayconiqReceipt,
-  // instore: PayconiqInstore,
+  instore: PayconiqInstore,
 };
 
 /* TODO: on instance creation, have option to 'enforce' invoice info uniqueness, by giving an array of invoiceInfo objects. When an instance wants to create an invoiceURL with existing invoiceInfo, error is thrown */
