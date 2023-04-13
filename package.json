@@ -1,6 +1,6 @@
 {
   "name": "payconiq",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Node.js implementation for interacting with the Payconiq V3 API",
   "main": "index.js",
   "scripts": {
