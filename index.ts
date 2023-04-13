@@ -505,7 +505,7 @@ export class PayconiqVerify {
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
     if (!isPayconiqJOSEHeader(header)) throw new PCBVError("Invalid header");
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
-    if (header.alg !== "ES256") throw new PCBVError("Unsupported algorithm");
+    if (header.alg.toUpperCase() !== "ES256") throw new PCBVError("Unsupported algorithm");
     if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
     if (this.product && header["https://payconiq.com/sub"] !== this.product.ppid)
       throw new PCBVError("Invalid subject");
@@ -578,7 +578,7 @@ export class PayconiqVerifyEXT {
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
     if (!isPayconiqJOSEHeader(header)) throw new PCBVError("Invalid header");
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
-    if (header.alg !== "ES256") throw new PCBVError("Unsupported algorithm");
+    if (header.alg.toUpperCase() !== "ES256") throw new PCBVError("Unsupported algorithm");
     if (header["https://payconiq.com/iss"] !== "Payconiq") throw new PCBVError("Invalid issuer");
     if (this.product && header["https://payconiq.com/sub"] !== this.product.ppid)
       throw new PCBVError("Invalid subject");
