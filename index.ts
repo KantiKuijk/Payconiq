@@ -38,12 +38,12 @@ const payconiqCritHeaders = [
 ] as const;
 type PayconiqCritHeader = (typeof payconiqCritHeaders)[number];
 export type PayconiqJOSEHeader = {
-  typ: string; //"jose+json";
+  typ: string;
   alg: string;
   kid: string;
   crit: [PayconiqCritHeader, PayconiqCritHeader, PayconiqCritHeader, PayconiqCritHeader, PayconiqCritHeader];
   "https://payconiq.com/sub": string;
-  "https://payconiq.com/iss": string; // "Payconiq";
+  "https://payconiq.com/iss": string;
   "https://payconiq.com/iat": string;
   "https://payconiq.com/jti": string;
   "https://payconiq.com/path": string;
@@ -220,14 +220,12 @@ function isPayconiqJOSEHeader(header: unknown): header is PayconiqJOSEHeader {
   } = header;
   return (
     typeof typ === "string" &&
-    // typ === "jose+json" &&
     typeof alg === "string" &&
     typeof kid === "string" &&
     Array.isArray(crit) &&
-    crit.every((c) => typeof c === "string" && payconiqCritHeaders.includes(c)) &&
+    crit.every((c) => typeof c === "string" && payconiqCritHeaders.some((C) => C === c)) &&
     typeof sub === "string" &&
     typeof iss === "string" &&
-    // iss === "Payconiq" &&
     typeof iat === "string" &&
     typeof jti === "string" &&
     typeof path === "string"
