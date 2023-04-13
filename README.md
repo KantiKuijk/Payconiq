@@ -28,7 +28,7 @@ npm install payconiq
 
 ```typescript
 import { PayconiqInvoice } from "payconiq"
-// Every payconiq product has it's own class
+// Every payconiq product has its own class
 // Here, the invoice product is used
 const payconiqInvoicing = PayconiqInvoice("lessSecretPaymentId", "verySecretAPIKey");
 
