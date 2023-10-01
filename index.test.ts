@@ -1,4 +1,4 @@
-import PayconiqProduct, { PayconiqInstore, PayconiqInvoice, PayconiqPredefined, PayconiqReceipt } from ".";
+import PayconiqProduct, { PayconiqInstore, PayconiqInvoice, PayconiqPredefined, PayconiqReceipt } from "./index.js";
 
 test("fail on incorrect paymentId", () => {
   expect(() => new PayconiqProduct("tooShortPaymentId", apiKey)).toThrow("Invalid Payment id");
