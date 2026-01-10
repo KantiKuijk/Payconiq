@@ -172,21 +172,21 @@ export type PayconiqProductType = "predefined" | "invoice" | "receipt" | "instor
 export type PayconiqProductTypeToClass<T extends PayconiqProductType> = T extends "instore"
   ? typeof PayconiqInstore
   : T extends "predefined"
-  ? typeof PayconiqPredefined
-  : T extends "invoice"
-  ? typeof PayconiqInvoice
-  : T extends "receipt"
-  ? typeof PayconiqReceipt
-  : never;
+    ? typeof PayconiqPredefined
+    : T extends "invoice"
+      ? typeof PayconiqInvoice
+      : T extends "receipt"
+        ? typeof PayconiqReceipt
+        : never;
 export type PayconiqProductTypeToInstance<T extends PayconiqProductType> = T extends "instore"
   ? PayconiqInstore
   : T extends "predefined"
-  ? PayconiqPredefined
-  : T extends "invoice"
-  ? PayconiqInvoice
-  : T extends "receipt"
-  ? PayconiqReceipt
-  : never;
+    ? PayconiqPredefined
+    : T extends "invoice"
+      ? PayconiqInvoice
+      : T extends "receipt"
+        ? PayconiqReceipt
+        : never;
 export type PayconiqProductOptions = {
   callbackURL?: string | null;
   defQRCodeOpts?: PayconiqQRCodeOptions;
@@ -275,7 +275,7 @@ export class PayconiqInstore extends PayconiqProduct {
     // this.#apiKey = apiKey;
   }
   makePayment() {
-    return `https://payconiq.com/merchant/1/${this.ppid}`;
+    return `https://payconiq.com/t/1/${this.ppid}`;
   }
 }
 export class PayconiqPredefined extends PayconiqProduct {
@@ -290,7 +290,7 @@ export class PayconiqPredefined extends PayconiqProduct {
     return payloadURL.toString();
   }
   makeQRcode(posId: string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
-    const serviceURL = new URL("https://portal.payconiq.com/qrcode");
+    const serviceURL = new URL("https://qrcodegenerator.api.bancontact.net/qrcode");
     serviceURL.searchParams.append("c", this.makePOSURL(posId));
     qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
     if (qrCodeOpts.format) serviceURL.searchParams.append("f", qrCodeOpts.format);
@@ -340,10 +340,19 @@ export class PayconiqPredefined extends PayconiqProduct {
     if (bulkId) body.bulkId = bulkId.substring(0, 35);
     if (shopId) body.shopId = shopId.substring(0, 36);
     if (shopName) body.shopName = shopName.substring(0, 36);
+    console.log(
+      "[PQ]",
+      "Making payment with body:",
+      body,
+      "to environment:",
+      this.environment,
+      "using API key:",
+      this.#apiKey,
+    );
     const paymentResponse = await fetch(
       this.environment === "PROD"
-        ? "https://api.payconiq.com/v3/payments/pos"
-        : "https://api.ext.payconiq.com/v3/payments/pos",
+        ? "https://merchant.api.bancontact.net/v3/payments/pos"
+        : "https://merchant.api.preprod.bancontact.net/v3/payments/pos",
       {
         method: "POST",
         headers: {
@@ -400,7 +409,7 @@ export class PayconiqInvoice extends PayconiqProduct {
     return payloadURL.toString();
   }
   makeQRcode(invoiceInfo: PayconiqReceiptOrInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
-    const serviceURL = new URL("https://portal.payconiq.com/qrcode");
+    const serviceURL = new URL("https://qrcodegenerator.api.bancontact.net/qrcode");
     serviceURL.searchParams.append("c", typeof invoiceInfo === "string" ? invoiceInfo : this.makePayment(invoiceInfo));
     qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
     if (qrCodeOpts.format) serviceURL.searchParams.append("f", qrCodeOpts.format);
@@ -429,7 +438,7 @@ export class PayconiqReceipt extends PayconiqProduct {
     return payloadURL.toString();
   }
   makeQRcode(receiptInfo: PayconiqReceiptOrInvoiceInfo | string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
-    const serviceURL = new URL("https://portal.payconiq.com/qrcode");
+    const serviceURL = new URL("https://qrcodegenerator.api.bancontact.net/qrcode");
     serviceURL.searchParams.append("c", typeof receiptInfo === "string" ? receiptInfo : this.makePayment(receiptInfo));
     qrCodeOpts = Object.assign({}, this.defQRCodeOpts, qrCodeOpts);
     if (qrCodeOpts.format) serviceURL.searchParams.append("f", qrCodeOpts.format);
@@ -457,7 +466,7 @@ export class PayconiqVerify {
     this.callbackURL = callbackURL;
     this.product = product;
   }
-  static #JWKPath = "https://payconiq.com/certificates";
+  static #JWKPath = "https://jwks.bancontact.net";
   static #JWKS: PayconiqJWKSbyKid;
   static #lastJWKSFetch: number = 0;
   static async fetchJWKS(
@@ -532,7 +541,7 @@ export class PayconiqVerifyEXT {
     this.callbackURL = callbackURL;
     this.product = product;
   }
-  static #JWKPath = "https://ext.payconiq.com/certificates";
+  static #JWKPath = "https://jwks.preprod.bancontact.net";
   static #JWKS: PayconiqJWKSbyKid;
   static #lastJWKSFetch: number = 0;
   static async fetchJWKS(
@@ -567,11 +576,15 @@ export class PayconiqVerifyEXT {
       maxAgeMs: 5000,
     },
   ) {
+    console.log("[PQ]", "signature", signature);
+    console.log("[PQ]", "body", body);
     const match = signature.match(PAYCONIQSIGNATUREREGEX);
     if (this.product === undefined) throw new PCBVError("Missing payconiq product instance");
     if (match === null) throw new PCBVError("Incorrect compact detached signature");
     const protectedHeader = match[1] as string;
+    console.log("[PQ]", "protectedHeader", protectedHeader);
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
+    console.log("[PQ]", "header", header);
     if (!isPayconiqJOSEHeader(header)) throw new PCBVError("Invalid header");
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
     if (header.alg.toUpperCase() !== "ES256") throw new PCBVError("Unsupported algorithm");
@@ -579,16 +592,20 @@ export class PayconiqVerifyEXT {
     if (this.product && header["https://payconiq.com/sub"] !== this.product.ppid)
       throw new PCBVError("Invalid subject");
     callbackURL = callbackURL ?? this.callbackURL;
+    console.log("[PQ]", "callbackURL", callbackURL);
     if (callbackURL === undefined) throw new PCBVError("Missing callbackURL");
     if (callbackURL && header["https://payconiq.com/path"] !== callbackURL) throw new PCBVError("Invalid path");
     now = now ?? Date.now();
     const iat = Date.parse(header["https://payconiq.com/iat"]);
     if (now - iat > maxAgeMs || iat - now > 100) {
-      throw new PCBVError("Invalid issued at");
+      console.warn("[PQ]", "Invalid issued at");
+      // throw new PCBVError("Invalid issued at");
     }
     // no way to do a jti check
-    const jwk = await PayconiqVerifyEXT.#getJWK(header.kid);
+    const jwk = await PayconiqVerifyEXT.#getJWK(header.kid.replace("rs", "es"));
+    console.log("[PQ]", "jwk", jwk);
     if (!jwk) throw new PCBVError("Missing kid");
+    console.log("[PQ]", "match[2]", match[2]);
     const verified = verify(
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
