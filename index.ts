@@ -340,15 +340,15 @@ export class PayconiqPredefined extends PayconiqProduct {
     if (bulkId) body.bulkId = bulkId.substring(0, 35);
     if (shopId) body.shopId = shopId.substring(0, 36);
     if (shopName) body.shopName = shopName.substring(0, 36);
-    console.log(
-      "[PQ]",
-      "Making payment with body:",
-      body,
-      "to environment:",
-      this.environment,
-      "using API key:",
-      this.#apiKey,
-    );
+    // console.log(
+    //   "[PQ]",
+    //   "Making payment with body:",
+    //   body,
+    //   "to environment:",
+    //   this.environment,
+    //   "using API key:",
+    //   this.#apiKey,
+    // );
     const paymentResponse = await fetch(
       this.environment === "PROD"
         ? "https://merchant.api.bancontact.net/v3/payments/pos"
@@ -576,15 +576,15 @@ export class PayconiqVerifyEXT {
       maxAgeMs: 5000,
     },
   ) {
-    console.log("[PQ]", "signature", signature);
-    console.log("[PQ]", "body", body);
+    // console.log("[PQ]", "signature", signature);
+    // console.log("[PQ]", "body", body);
     const match = signature.match(PAYCONIQSIGNATUREREGEX);
     if (this.product === undefined) throw new PCBVError("Missing payconiq product instance");
     if (match === null) throw new PCBVError("Incorrect compact detached signature");
     const protectedHeader = match[1] as string;
-    console.log("[PQ]", "protectedHeader", protectedHeader);
+    // console.log("[PQ]", "protectedHeader", protectedHeader);
     const header = JSON.parse(Buffer.from(protectedHeader, "base64").toString());
-    console.log("[PQ]", "header", header);
+    // console.log("[PQ]", "header", header);
     if (!isPayconiqJOSEHeader(header)) throw new PCBVError("Invalid header");
     if (header.typ.toUpperCase() !== "JOSE+JSON") throw new PCBVError("Unsupported type");
     if (header.alg.toUpperCase() !== "ES256") throw new PCBVError("Unsupported algorithm");
@@ -592,7 +592,7 @@ export class PayconiqVerifyEXT {
     if (this.product && header["https://payconiq.com/sub"] !== this.product.ppid)
       throw new PCBVError("Invalid subject");
     callbackURL = callbackURL ?? this.callbackURL;
-    console.log("[PQ]", "callbackURL", callbackURL);
+    // console.log("[PQ]", "callbackURL", callbackURL);
     if (callbackURL === undefined) throw new PCBVError("Missing callbackURL");
     if (callbackURL && header["https://payconiq.com/path"] !== callbackURL) throw new PCBVError("Invalid path");
     now = now ?? Date.now();
@@ -604,7 +604,7 @@ export class PayconiqVerifyEXT {
     // no way to do a jti check
     const jwk = await PayconiqVerifyEXT.#getJWK(header.kid.replace("rs", "es"));
     if (!jwk) throw new PCBVError("Missing kid");
-    console.log("[PQ]", "match[2]", match[2]);
+    // console.log("[PQ]", "match[2]", match[2]);
     const verified = verify(
       "sha256",
       Buffer.from(protectedHeader + "." + Buffer.from(body).toString("base64url")),
