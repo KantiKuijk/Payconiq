@@ -21,7 +21,7 @@ export type PayconiqJWK = {
   kid: string;
   "x5t#S256": string;
   alg: string;
-  x5c: string[];
+  x5c?: string[];
   n: string;
   e: string;
 };
@@ -275,7 +275,7 @@ export class PayconiqInstore extends PayconiqProduct {
     // this.#apiKey = apiKey;
   }
   makePayment() {
-    return `https://payconiq.com/t/1/${this.ppid}`;
+    return `https://pay.bancontact.net/t/1/${this.ppid}`;
   }
 }
 export class PayconiqPredefined extends PayconiqProduct {
@@ -286,7 +286,7 @@ export class PayconiqPredefined extends PayconiqProduct {
   }
   makePOSURL(posId: string) {
     assert(/^([a-z0-9]{1,36}|[A-Z0-9]{1,36})$/.test(posId), "Invalid posId");
-    const payloadURL = new URL(`https://payconiq.com/l/1/${this.ppid}/${posId}`);
+    const payloadURL = new URL(`https://pay.bancontact.net/l/1/${this.ppid}/${posId}`);
     return payloadURL.toString();
   }
   makeQRcode(posId: string, qrCodeOpts: PayconiqQRCodeOptions = {}) {
@@ -402,7 +402,7 @@ export class PayconiqInvoice extends PayconiqProduct {
   }
   makePayment(invoiceInfo: PayconiqReceiptOrInvoiceInfo) {
     this.assertInvoiceInfo(invoiceInfo);
-    const payloadURL = new URL(`https://payconiq.com/t/1/${this.ppid}`);
+    const payloadURL = new URL(`https://pay.bancontact.net/t/1/${this.ppid}`);
     if (invoiceInfo.amount) payloadURL.searchParams.append("A", String(invoiceInfo.amount));
     if (invoiceInfo.description) payloadURL.searchParams.append("D", invoiceInfo.description);
     if (invoiceInfo.reference) payloadURL.searchParams.append("R", invoiceInfo.reference);
@@ -431,7 +431,7 @@ export class PayconiqReceipt extends PayconiqProduct {
   }
   makePayment(receiptInfo: PayconiqReceiptOrInvoiceInfo) {
     this.assertReceiptInfo(receiptInfo);
-    const payloadURL = new URL(`https://payconiq.com/t/1/${this.ppid}`);
+    const payloadURL = new URL(`https://pay.bancontact.net/t/1/${this.ppid}`);
     if (receiptInfo.amount) payloadURL.searchParams.append("A", String(receiptInfo.amount));
     if (receiptInfo.description) payloadURL.searchParams.append("D", receiptInfo.description);
     if (receiptInfo.reference) payloadURL.searchParams.append("R", receiptInfo.reference);
@@ -485,7 +485,7 @@ export class PayconiqVerify {
           key.use === "sig" &&
           ((key.kty === "RSA" && key.alg === "RS256") || (key.kty === "EC" && key.alg === "ES256")) &&
           key.kid &&
-          typeof key.x5c[0] === "string",
+          typeof key.x5c?.[0] === "string",
       );
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));
@@ -558,7 +558,7 @@ export class PayconiqVerifyEXT {
           key.use === "sig" &&
           ((key.kty === "RSA" && key.alg === "RS256") || (key.kty === "EC" && key.alg === "ES256")) &&
           key.kid &&
-          typeof key.x5c[0] === "string",
+          typeof key.x5c?.[0] === "string",
       );
     }
     this.#JWKS = Object.fromEntries((JWKS ?? []).map((jwk) => [jwk.kid, jwk]));

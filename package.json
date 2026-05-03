@@ -1,6 +1,6 @@
 {
   "name": "payconiq",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "Node.js implementation for interacting with the Payconiq V3 API",
   "main": "index.js",
   "type": "module",
@@ -20,11 +20,14 @@
     "url": "git+https://github.com/KantiKuijk/Payconiq.git"
   },
   "keywords": [
-    "payconiq",
-    "payment",
-    "api",
     "bancontact",
-    "mobilepayment"
+    "bancontactpro",
+    "wero",
+    "epi",
+    "payment",
+    "onlinepayment",
+    "mobilepayment",
+    "api"
   ],
   "author": "Kanti Kuijk",
   "license": "GPL-3.0",
